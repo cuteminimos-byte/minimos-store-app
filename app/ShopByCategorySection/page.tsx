@@ -4,7 +4,7 @@ import React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 
-export function ShopByCategorySection() {
+export default function ShopByCategorySection() {
   const categories = [
     {
       id: 1,
