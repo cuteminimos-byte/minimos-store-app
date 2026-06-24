@@ -1,1 +1,1 @@
-https://wa.me/923xxxxxxxxx?text=New Order: Product XYZ, Amount: 500
+https://wa.me/03001803448?text=New Order: Product XYZ, Amount: 500
