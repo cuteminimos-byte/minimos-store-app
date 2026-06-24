@@ -1,1 +1,2 @@
-https://wa.me/03001803448?text=New Order: Product XYZ, Amount: 500
+const whatsappUrl =
+  "https://wa.me/923001803448?text=New%20Order";
