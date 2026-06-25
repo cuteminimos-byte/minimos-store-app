@@ -1,8 +1,6 @@
 import { defineConfig, globalIgnores } from "eslint/config";
-import nextConfig from "eslint-config-next/flat.js";
 
 const eslintConfig = defineConfig([
-  ...nextConfig,
   globalIgnores([
     ".next/**",
     "out/**",
