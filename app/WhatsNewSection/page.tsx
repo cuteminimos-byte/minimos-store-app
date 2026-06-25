@@ -11,7 +11,7 @@ import 'swiper/css';
 import 'swiper/css/pagination';
 import 'swiper/css/navigation';
 
-export function WhatsNewSection() {
+export default function WhatsNewSection() {
     const searchParams = useSearchParams();
     const searchQuery = searchParams.get('query')?.toLowerCase() || '';
 
