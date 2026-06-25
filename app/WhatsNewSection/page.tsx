@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { Suspense } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
@@ -11,7 +11,7 @@ import 'swiper/css';
 import 'swiper/css/pagination';
 import 'swiper/css/navigation';
 
-export default function WhatsNewSection() {
+function WhatsNewSectionContent() {
     const searchParams = useSearchParams();
     const searchQuery = searchParams.get('query')?.toLowerCase() || '';
 
@@ -24,12 +24,10 @@ export default function WhatsNewSection() {
         { id: 6, title: "Winter Specials", src: "/images/image9.jpeg", link: "/whats-new/winter-specials" }
     ];
 
-    // Search query ke mutabik products filter ho rahe hain
     const filteredProducts = products.filter(product =>
         product.title.toLowerCase().includes(searchQuery)
     );
 
-    // Agar search result khali ho to section hide ya text show kar sakte hain
     if (filteredProducts.length === 0) {
         return (
             <section className="w-full text-center py-12 text-gray-500">
@@ -47,7 +45,6 @@ export default function WhatsNewSection() {
             </div>
 
             <div className="w-full relative px-0 mx-0 overflow-hidden">
-                {/* key={filteredProducts.length} lagane se Swiper search ke sath reset ho kar sahi loops banayega */}
                 <Swiper
                     key={filteredProducts.length}
                     modules={[Navigation, Pagination, Autoplay]}
@@ -118,5 +115,13 @@ export default function WhatsNewSection() {
                 }
             `}</style>
         </section>
+    );
+}
+
+export default function WhatsNewSection() {
+    return (
+        <Suspense fallback={null}>
+            <WhatsNewSectionContent />
+        </Suspense>
     );
 }
