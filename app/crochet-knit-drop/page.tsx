@@ -3,14 +3,21 @@
 import React, { useState } from 'react';
 import Image from 'next/image';
 
+interface Product {
+  id: number;
+  title: string;
+  price: string;
+  numericPrice: number;
+  sku: string;
+  image: string;
+}
+
 export default function CrochetKnitDropPage() {
-  // State management for Quick View Modal
-  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [selectedSize, setSelectedSize] = useState('New Born');
 
-  // 8 Unique items with custom SKUs and structural numeric pricing for the subtotal
-  const products = [
+  const products: Product[] = [
     { id: 1, title: 'Knitwear Classic 1', price: "Rs.4,500.00", numericPrice: 4500, sku: "CKD-01", image: 'https://swocclothing.com/cdn/shop/files/5_822c1a24-622d-4b5f-9f9d-967200d18155_870x.jpg?v=1761278487' },
     { id: 2, title: 'Knitwear Classic 2', price: "Rs.5,200.00", numericPrice: 5200, sku: "CKD-02", image: 'https://swocclothing.com/cdn/shop/files/5_822c1a24-622d-4b5f-9f9d-967200d18155_870x.jpg?v=1761278487' },
     { id: 3, title: 'Knitwear Classic 3', price: "Rs.3,800.00", numericPrice: 3800, sku: "CKD-03", image: 'https://swocclothing.com/cdn/shop/files/5_822c1a24-622d-4b5f-9f9d-967200d18155_870x.jpg?v=1761278487' },
@@ -28,7 +35,7 @@ export default function CrochetKnitDropPage() {
     "11-12 Y", "12-13 Y", "13-14 Y", "14-15 Y"
   ];
 
-  const openQuickView = (product) => {
+  const openQuickView = (product: Product) => {
     setSelectedProduct(product);
     setQuantity(1);
     setSelectedSize('New Born');
@@ -40,10 +47,8 @@ export default function CrochetKnitDropPage() {
 
   const handleBuyItNow = () => {
     if (!selectedProduct) return;
-    
-    const phoneNumber = "923151640537"; 
+    const phoneNumber = "923151640537";
     const message = `Salam SWOC! I want to buy this product:\n\n*Product:* ${selectedProduct.title}\n*SKU:* ${selectedProduct.sku}\n*Size:* ${selectedSize}\n*Quantity:* ${quantity}\n*Total Price:* Rs.${(selectedProduct.numericPrice * quantity).toLocaleString()}`;
-    
     const encodedMessage = encodeURIComponent(message);
     window.open(`https://wa.me/${phoneNumber}?text=${encodedMessage}`, '_blank');
   };
@@ -51,14 +56,12 @@ export default function CrochetKnitDropPage() {
   return (
     <div className="w-full min-h-screen py-12 px-4 md:px-8 max-w-[1400px] mx-auto">
       
-      {/* Page Title Centered */}
       <div className="flex justify-center mb-12">
         <h1 className="text-2xl md:text-4xl font-serif text-[#1a1a1a] tracking-wide">
           Crochet & Knit Drop.
         </h1>
       </div>
 
-      {/* Expanded Grid Area */}
       <div className="max-w-[1300px] mx-auto">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 md:gap-6">
           {products.map((product) => (
@@ -76,7 +79,6 @@ export default function CrochetKnitDropPage() {
                 unoptimized
               />
               
-              {/* Quick View Pill - Trigger on Box Click */}
               <button 
                 onClick={() => openQuickView(product)}
                 className="absolute top-3 right-3 z-30 bg-white text-gray-900 font-sans text-[11px] font-semibold px-2.5 py-1.5 rounded-full flex items-center gap-1 shadow-md opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-1 group-hover:translate-y-0 cursor-pointer border-0"
@@ -88,10 +90,8 @@ export default function CrochetKnitDropPage() {
                 </svg>
               </button>
 
-              {/* Minimal Dark gradient overlay */}
               <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent z-10 pointer-events-none" />
 
-              {/* Category Title Overlay */}
               <div className="absolute bottom-3 left-3 md:bottom-5 md:left-5 z-20 pr-3 pointer-events-none">
                 <h2 className="text-white font-serif font-bold text-sm sm:text-base md:text-lg tracking-wide drop-shadow-sm leading-tight">
                   {product.title}
@@ -103,14 +103,10 @@ export default function CrochetKnitDropPage() {
         </div>
       </div>
 
-      {/* ---------------- QUICK VIEW MODAL POPUP SYSTEM ---------------- */}
       {selectedProduct && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-          
-          {/* Compact Sleek Modal Wrapper Box */}
           <div className="bg-white rounded-xs overflow-hidden max-w-[760px] w-full relative shadow-2xl flex flex-col md:flex-row animate-in fade-in zoom-in-95 duration-200">
             
-            {/* Close Cross Top Button */}
             <button 
               onClick={closeQuickView}
               className="absolute top-0 right-0 z-50 bg-black text-white w-10 h-10 flex items-center justify-center hover:bg-neutral-800 transition-colors cursor-pointer"
@@ -120,9 +116,7 @@ export default function CrochetKnitDropPage() {
               </svg>
             </button>
 
-            {/* Left Box Image Matrix */}
             <div className="w-full md:w-1/2 p-5 flex flex-col justify-between bg-white border-r border-gray-100">
-              {/* Image Zoom Hover & Pointer Action */}
               <div className="relative aspect-square w-full rounded-xs overflow-hidden group/modalimg cursor-pointer">
                 <Image
                   src={selectedProduct.image}
@@ -139,7 +133,6 @@ export default function CrochetKnitDropPage() {
               </div>
             </div>
 
-            {/* Right Information Metadata Column */}
             <div className="w-full md:w-1/2 p-6 flex flex-col justify-start overflow-y-auto max-h-[80vh] md:max-h-none">
               <h2 className="text-xl font-serif font-bold text-gray-900 leading-tight">
                 {selectedProduct.title}
@@ -147,7 +140,6 @@ export default function CrochetKnitDropPage() {
               <p className="text-[11px] text-gray-400 font-sans mt-1 uppercase">
                 SKU: {selectedProduct.sku}
               </p>
-              
               <p className="text-lg font-bold text-gray-900 font-sans mt-3">
                 {selectedProduct.price}
               </p>
@@ -157,7 +149,6 @@ export default function CrochetKnitDropPage() {
                 <span className="text-xs font-bold text-gray-900">{selectedSize}</span>
               </div>
 
-              {/* Sizing Layout */}
               <div className="flex flex-wrap gap-1.5 mt-2 max-w-[340px]">
                 {sizesList.map((size) => (
                   <button
@@ -174,7 +165,6 @@ export default function CrochetKnitDropPage() {
                 ))}
               </div>
 
-              {/* Quantity Selector Matrix */}
               <div className="mt-4">
                 <label className="text-xs font-medium text-gray-500 block mb-1">Quantity:</label>
                 <div className="inline-flex items-center border border-gray-400 rounded-xs bg-white">
@@ -196,7 +186,6 @@ export default function CrochetKnitDropPage() {
                 </div>
               </div>
 
-              {/* Subtotal Calculations Row */}
               <div className="mt-4 border-t border-gray-100 pt-3">
                 <div className="text-xs text-gray-700 flex gap-1">
                   <span>Subtotal:</span>
@@ -206,14 +195,10 @@ export default function CrochetKnitDropPage() {
                 </div>
               </div>
 
-              {/* Inverse Hover Actions Buttons Box */}
               <div className="mt-5 space-y-2.5">
-                {/* Black to White Inverse Button */}
                 <button className="w-full bg-[#1c1c1c] text-white border border-[#1c1c1c] font-sans text-xs font-bold uppercase tracking-wider py-3.5 rounded-xs hover:bg-white hover:text-black transition-colors duration-300 cursor-pointer">
                   Add to Cart
                 </button>
-                
-                {/* White to Black Inverse Button + WhatsApp Link */}
                 <button 
                   onClick={handleBuyItNow}
                   className="w-full bg-white text-gray-900 border border-gray-900 font-sans text-xs font-bold uppercase tracking-wider py-3.5 rounded-xs hover:bg-black hover:text-white transition-colors duration-300 cursor-pointer"
@@ -221,12 +206,10 @@ export default function CrochetKnitDropPage() {
                   Buy It Now
                 </button>
               </div>
-
             </div>
           </div>
         </div>
       )}
-
     </div>
   );
 }
