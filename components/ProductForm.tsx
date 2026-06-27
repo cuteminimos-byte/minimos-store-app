@@ -4,12 +4,7 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { supabase } from '@/lib/supabase';
 import { CATEGORIES } from '@/lib/categories'; // ✅ shared categories — admin & header sync
-
-const ALL_SIZES = [
-  "New Born","0-3 M","3-6 M","6-9 M","9-12 M","12-18 M","18-24 M",
-  "2-3 Y","3-4 Y","4-5 Y","5-6 Y","6-7 Y","7-8 Y","8-9 Y","9-10 Y",
-  "10-11 Y","11-12 Y","12-13 Y","13-14 Y","14-15 Y"
-];
+import { SIZES } from '@/lib/sizes'; // ✅ shared sizes — admin & home/product pages sync
 
 const SECTIONS = [
   { value: 'new-arrivals', label: '🆕 New Arrivals (Trending section)' },
@@ -42,6 +37,10 @@ const DEFAULT_TIER_GROUPS: Omit<PriceTier, 'id' | 'price'>[] = [
   {
     label: 'Older Kids (8Y – 15Y)',
     sizes: ['8-9 Y','9-10 Y','10-11 Y','11-12 Y','12-13 Y','13-14 Y','14-15 Y'],
+  },
+  {
+    label: 'Adult / Unstitched',
+    sizes: ['Small','Medium','Large','XL','XXL','Unstitched'],
   },
 ];
 
@@ -461,7 +460,7 @@ export default function ProductForm({
                       <div>
                         <p className="text-xs text-gray-500 mb-2 font-medium">Sizes (click to toggle):</p>
                         <div className="flex flex-wrap gap-1.5">
-                          {ALL_SIZES.map(size => {
+                          {SIZES.map(size => {
                             const inThisTier = tier.sizes.includes(size);
                             const inOtherTier = !inThisTier && assignedSizes.has(size);
                             return (
@@ -634,7 +633,7 @@ export default function ProductForm({
                 <span className="text-gray-400 font-normal ml-1">({selectedSizes.length} selected)</span>
               </label>
               <div className="flex flex-wrap gap-2">
-                {ALL_SIZES.map(size => (
+                {SIZES.map(size => (
                   <button
                     key={size}
                     type="button"

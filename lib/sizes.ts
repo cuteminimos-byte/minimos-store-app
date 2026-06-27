@@ -1,0 +1,31 @@
+
+export const SIZES = [
+  "New Born",
+  "0-3 M",
+  "3-6 M",
+  "6-9 M",
+  "9-12 M",
+  "12-18 M",
+  "18-24 M",
+  "2-3 Y",
+  "3-4 Y",
+  "4-5 Y",
+  "5-6 Y",
+  "6-7 Y",
+  "7-8 Y",
+  "8-9 Y",
+  "9-10 Y",
+  "10-11 Y",
+  "11-12 Y",
+  "12-13 Y",
+  "13-14 Y",
+  "14-15 Y",
+  "Small",
+  "Medium",
+  "Large",
+  "XL",
+  "XXL",
+  "Unstitched",
+] as const;
+
+export type SizeOption = (typeof SIZES)[number];

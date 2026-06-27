@@ -9,6 +9,7 @@ import { Pagination, Autoplay, Navigation } from 'swiper/modules';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { CATEGORIES } from '@/lib/categories';
+import { SIZES } from '@/lib/sizes';
 
 import 'swiper/css';
 import 'swiper/css/pagination';
@@ -47,12 +48,6 @@ type CartItem = {
   size: string;
   quantity: number;
 };
-
-const SIZES_LIST = [
-  "New Born","0-3 M","3-6 M","6-9 M","9-12 M","12-18 M","18-24 M",
-  "2-3 Y","3-4 Y","4-5 Y","5-6 Y","6-7 Y","7-8 Y","8-9 Y","9-10 Y",
-  "10-11 Y","11-12 Y","12-13 Y","13-14 Y","14-15 Y"
-];
 
 const PHONE = "923151640537";
 const CART_STORAGE_KEY = "cute_minimos_cart";
@@ -470,7 +465,7 @@ function QuickViewModal({ product, onClose }: { product: Product; onClose: () =>
   const [selectedSize, setSelectedSize] = useState(product.sizes?.[0] || 'New Born');
   const [added, setAdded] = useState(false);
 
-  const sizes = product.sizes?.length ? product.sizes : SIZES_LIST;
+  const sizes = product.sizes?.length ? product.sizes : SIZES;
   const image = product.images?.[0] || '/images/image1.jpeg';
 
   const currentPrice = getPriceForSize(selectedSize, product.price_tiers, product.price);
