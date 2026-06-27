@@ -8,7 +8,7 @@ export default function AdminLogin() {
   const router = useRouter();
 
   const handleLogin = () => {
-    if (password === 'swoc_admin_2024') {
+    if (password === 'cute_admin_2024') {
       localStorage.setItem('admin_auth', 'true');
       router.push('/admin/products');
     } else {

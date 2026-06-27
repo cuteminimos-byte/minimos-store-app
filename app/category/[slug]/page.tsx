@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { CATEGORIES } from '@/lib/categories'; // ✅ shared categories — admin & header sync
 
 type Product = {
   id: string;
@@ -16,18 +17,22 @@ type Product = {
   in_stock: boolean;
 };
 
-// Category slug to display name + Supabase category filter mapping
+// ── Category slug → display label + Supabase category filter ──
+// ✅ Auto-generated from the SAME shared list used by the admin
+// panel (ProductForm) and the header. Har category ka apna slug
+// hi uska db filter hai — isliye koi mismatch ya 404 nahi aayega.
+//
+// "readyToShip" ek extra entry hai jo CATEGORIES list mein nahi
+// hai (woh "What's New" carousel se aata hai) — usay yahan
+// manually rakha gaya hai taake woh link bhi kaam kare.
 const CATEGORY_MAP: Record<string, { label: string; dbCategories: string[] }> = {
-  'boys':             { label: 'Boys',            dbCategories: ['festive-classics','crochet-knit-drop','summer-basics'] },
-  'girls':            { label: 'Girls',           dbCategories: ['princess-diaries','festive-classics','monochrome-edit'] },
-  'men':              { label: 'Men',             dbCategories: ['monochrome-edit'] },
-  'festive-classics': { label: 'Festive Classics',dbCategories: ['festive-classics'] },
-  'crochet-knit-drop':{ label: 'Crochet & Knit',  dbCategories: ['crochet-knit-drop'] },
-  'monochrome-edit':  { label: 'Monochrome Edit', dbCategories: ['monochrome-edit'] },
-  'princess-diaries': { label: 'Princess Diaries',dbCategories: ['princess-diaries'] },
-  'summer-basics':    { label: 'Summer Basics',   dbCategories: ['summer-basics'] },
-  'accessories':      { label: 'Accessories',     dbCategories: ['accessories'] },
-  'readyToShip':      { label: 'Ready To Ship',   dbCategories: ['readyToShip'] },
+  ...Object.fromEntries(
+    CATEGORIES.map((cat) => [
+      cat.value,
+      { label: cat.label, dbCategories: [cat.value] },
+    ])
+  ),
+  'readyToShip': { label: 'Ready To Ship', dbCategories: ['readyToShip'] },
 };
 
 export default function CategoryPage() {

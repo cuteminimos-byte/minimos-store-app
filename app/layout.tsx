@@ -7,7 +7,7 @@ import Footer from '@/src/components/footer';
 
 export const metadata: Metadata = {
   title: "Cute Minimo's",
-  description: "Premium knitted clothing for Boys, Girls & Men",
+  description: "premium handcrafted clothing for girls boys and womens",
   icons: {
     icon: "/images/logo1.jpg",
   },
@@ -15,10 +15,10 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-  modals, // 1. Naya slot catch kiya
+  modals,
 }: {
   children: React.ReactNode;
-  modals: React.ReactNode; // 2. Iska type bataya
+  modals: React.ReactNode;
 }) {
   return (
     <html lang="en">
@@ -43,7 +43,6 @@ export default function RootLayout({
           <Footer />
         </footer>
 
-        {/* 3. Modals ko body ke end mein render kiya taake ye baqi sab ke UPAR overlay ban sake */}
         {modals}
 
       </body>

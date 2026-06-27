@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { supabase } from '@/lib/supabase';
+import { CATEGORIES } from '@/lib/categories'; // ✅ shared categories — admin & header sync
 
 const ALL_SIZES = [
   "New Born","0-3 M","3-6 M","6-9 M","9-12 M","12-18 M","18-24 M",
@@ -10,20 +11,45 @@ const ALL_SIZES = [
   "10-11 Y","11-12 Y","12-13 Y","13-14 Y","14-15 Y"
 ];
 
-const CATEGORIES = [
-  'festive-classics','crochet-knit-drop','monochrome-edit',
-  'princess-diaries','summer-basics','accessories','readyToShip'
-];
-
 const SECTIONS = [
   { value: 'new-arrivals', label: '🆕 New Arrivals (Trending section)' },
   { value: 'festival',     label: '🎉 Festival Picks (Festival section)' },
 ];
 
+// ── Price Tier Groups ──────────────────────────────────────────
+// Har group ka naam, sizes, aur ek price hogi
+export type PriceTier = {
+  id: string;       // unique identifier e.g. "tier_0"
+  label: string;    // display name e.g. "Infant (0–18M)"
+  sizes: string[];  // which sizes belong to this tier
+  price: string;    // price in Rs.
+};
+
+// Default suggested groups — admin chahe to edit kar sakta hai
+const DEFAULT_TIER_GROUPS: Omit<PriceTier, 'id' | 'price'>[] = [
+  {
+    label: 'Infant (New Born – 18M)',
+    sizes: ['New Born','0-3 M','3-6 M','6-9 M','9-12 M','12-18 M'],
+  },
+  {
+    label: 'Toddler (18M – 4Y)',
+    sizes: ['18-24 M','2-3 Y','3-4 Y'],
+  },
+  {
+    label: 'Kids (4Y – 8Y)',
+    sizes: ['4-5 Y','5-6 Y','6-7 Y','7-8 Y'],
+  },
+  {
+    label: 'Older Kids (8Y – 15Y)',
+    sizes: ['8-9 Y','9-10 Y','10-11 Y','11-12 Y','12-13 Y','13-14 Y','14-15 Y'],
+  },
+];
+
+// ── Types ──────────────────────────────────────────────────────
 export type ProductFormData = {
   id?: string;
   title: string;
-  price: string;
+  price: string;           // base / fallback price
   sku: string;
   category: string;
   section: string;
@@ -32,20 +58,32 @@ export type ProductFormData = {
   stock_quantity: string;
   images: string[];
   sizes: string[];
+  price_tiers: PriceTier[]; // NEW
 };
 
 const EMPTY_FORM: ProductFormData = {
   title: '',
   price: '',
   sku: '',
-  category: 'festive-classics',
+  category: CATEGORIES[0].value, // ✅ default = first category in shared list
   section: 'new-arrivals',
   description: '',
   in_stock: true,
   stock_quantity: '',
   images: [],
   sizes: [],
+  price_tiers: [],
 };
+
+// ── Helper: build initial tiers from DEFAULT_TIER_GROUPS ──────
+function buildDefaultTiers(): PriceTier[] {
+  return DEFAULT_TIER_GROUPS.map((g, i) => ({
+    id: `tier_${i}`,
+    label: g.label,
+    sizes: g.sizes,
+    price: '',
+  }));
+}
 
 export default function ProductForm({
   mode,
@@ -64,15 +102,28 @@ export default function ProductForm({
   const [selectedSizes, setSelectedSizes] = useState<string[]>(initialData?.sizes || []);
   const [error, setError] = useState('');
 
+  // Price tiers state
+  const [useTieredPricing, setUseTieredPricing] = useState<boolean>(
+    !!(initialData?.price_tiers && initialData.price_tiers.length > 0)
+  );
+  const [priceTiers, setPriceTiers] = useState<PriceTier[]>(
+    initialData?.price_tiers?.length
+      ? initialData.price_tiers
+      : buildDefaultTiers()
+  );
+
   const [form, setForm] = useState<ProductFormData>(initialData || EMPTY_FORM);
 
-  // Keep form in sync if initialData arrives after an async fetch (edit page)
   useEffect(() => {
     if (initialData) {
       setForm(initialData);
       setUploadedImages(initialData.images || []);
       setPreviewImages(initialData.images || []);
       setSelectedSizes(initialData.sizes || []);
+      if (initialData.price_tiers?.length) {
+        setUseTieredPricing(true);
+        setPriceTiers(initialData.price_tiers);
+      }
     }
   }, [initialData]);
 
@@ -84,36 +135,27 @@ export default function ProductForm({
       setError('Maximum 5 images allowed');
       return;
     }
-
     setUploadingImages(true);
     setError('');
-
     const previews = files.map(f => URL.createObjectURL(f));
     setPreviewImages(prev => [...prev, ...previews]);
-
     const newUrls: string[] = [];
-
     for (const file of files) {
       const ext = file.name.split('.').pop();
       const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-
       const { error: uploadError } = await supabase.storage
         .from('product-images')
         .upload(fileName, file, { cacheControl: '3600', upsert: false });
-
       if (uploadError) {
         setError(`Upload failed: ${uploadError.message}`);
         setUploadingImages(false);
         return;
       }
-
       const { data: urlData } = supabase.storage
         .from('product-images')
         .getPublicUrl(fileName);
-
       newUrls.push(urlData.publicUrl);
     }
-
     setUploadedImages(prev => [...prev, ...newUrls]);
     setUploadingImages(false);
   };
@@ -129,26 +171,86 @@ export default function ProductForm({
     );
   };
 
-  /* ── Save Product (Add or Edit) ── */
+  /* ── Price Tier Helpers ── */
+  const updateTierPrice = (tierId: string, price: string) => {
+    setPriceTiers(prev =>
+      prev.map(t => t.id === tierId ? { ...t, price } : t)
+    );
+  };
+
+  const updateTierLabel = (tierId: string, label: string) => {
+    setPriceTiers(prev =>
+      prev.map(t => t.id === tierId ? { ...t, label } : t)
+    );
+  };
+
+  const toggleSizeInTier = (tierId: string, size: string) => {
+    setPriceTiers(prev =>
+      prev.map(t => {
+        if (t.id !== tierId) return t;
+        const has = t.sizes.includes(size);
+        return { ...t, sizes: has ? t.sizes.filter(s => s !== size) : [...t.sizes, size] };
+      })
+    );
+  };
+
+  const addCustomTier = () => {
+    const newTier: PriceTier = {
+      id: `tier_custom_${Date.now()}`,
+      label: 'New Group',
+      sizes: [],
+      price: '',
+    };
+    setPriceTiers(prev => [...prev, newTier]);
+  };
+
+  const removeTier = (tierId: string) => {
+    setPriceTiers(prev => prev.filter(t => t.id !== tierId));
+  };
+
+  // Which sizes are already assigned to some tier (to highlight duplicates)
+  const assignedSizes = new Set(priceTiers.flatMap(t => t.sizes));
+
+  /* ── Save Product ── */
   const handleSubmit = async () => {
     setError('');
     if (!form.title.trim()) { setError('Title zaroori hai'); return; }
-    if (!form.price)         { setError('Price zaroori hai'); return; }
+    if (!useTieredPricing && !form.price) { setError('Price zaroori hai'); return; }
+    if (useTieredPricing) {
+      const hasEmpty = priceTiers.some(t => t.sizes.length > 0 && !t.price);
+      if (hasEmpty) { setError('Har active tier ka price fill karo'); return; }
+    }
     if (uploadedImages.length === 0) { setError('Kam az kam 1 image upload karo'); return; }
 
     setSaving(true);
 
+    // Compute base price: lowest tier price or manual price
+    let basePrice = parseFloat(form.price) || 0;
+    if (useTieredPricing) {
+      const tierPrices = priceTiers
+        .filter(t => t.price)
+        .map(t => parseFloat(t.price));
+      if (tierPrices.length) basePrice = Math.min(...tierPrices);
+    }
+
+    // Collect all sizes from tiers if tiered pricing is on
+    const allTierSizes = useTieredPricing
+      ? [...new Set(priceTiers.flatMap(t => t.sizes))]
+      : selectedSizes;
+
     const payload = {
       title:          form.title.trim(),
-      price:          parseFloat(form.price),
+      price:          basePrice,
       sku:            form.sku.trim(),
       category:       form.category,
       section:        form.section,
       description:    form.description.trim(),
       images:         uploadedImages,
-      sizes:          selectedSizes,
+      sizes:          allTierSizes,
       in_stock:       form.in_stock,
       stock_quantity: form.stock_quantity === '' ? 0 : parseInt(form.stock_quantity, 10),
+      // Store full tier info as JSON — make sure your Supabase column is jsonb type
+      price_tiers:    useTieredPricing ? priceTiers : [],
     };
 
     const { error: dbError } = mode === 'edit' && form.id
@@ -156,12 +258,7 @@ export default function ProductForm({
       : await supabase.from('products').insert(payload);
 
     setSaving(false);
-
-    if (dbError) {
-      setError(`Save failed: ${dbError.message}`);
-      return;
-    }
-
+    if (dbError) { setError(`Save failed: ${dbError.message}`); return; }
     router.push('/admin/products');
   };
 
@@ -203,7 +300,6 @@ export default function ProductForm({
               Product Images <span className="text-red-500">*</span>
               <span className="text-gray-400 font-normal ml-1">(max 5)</span>
             </label>
-
             <div
               onClick={() => fileInputRef.current?.click()}
               className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors
@@ -230,16 +326,7 @@ export default function ProductForm({
                 </div>
               )}
             </div>
-
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              multiple
-              className="hidden"
-              onChange={handleImageSelect}
-            />
-
+            <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleImageSelect}/>
             {previewImages.length > 0 && (
               <div className="flex flex-wrap gap-3 mt-3">
                 {previewImages.map((src, i) => (
@@ -254,26 +341,15 @@ export default function ProductForm({
                       </div>
                     )}
                     {i < uploadedImages.length && (
-                      <button
-                        onClick={() => removeImage(i)}
-                        className="absolute top-1 right-1 bg-red-500 text-white w-5 h-5 rounded-full text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        ✕
-                      </button>
+                      <button onClick={() => removeImage(i)} className="absolute top-1 right-1 bg-red-500 text-white w-5 h-5 rounded-full text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
                     )}
                     {i === 0 && (
-                      <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[9px] text-center py-0.5 font-bold">
-                        MAIN
-                      </div>
+                      <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[9px] text-center py-0.5 font-bold">MAIN</div>
                     )}
                   </div>
                 ))}
-
                 {previewImages.length < 5 && (
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    className="w-20 h-24 rounded-xl border-2 border-dashed border-gray-200 hover:border-gray-400 flex items-center justify-center text-gray-400 hover:text-gray-600 transition-colors"
-                  >
+                  <button onClick={() => fileInputRef.current?.click()} className="w-20 h-24 rounded-xl border-2 border-dashed border-gray-200 hover:border-gray-400 flex items-center justify-center text-gray-400 hover:text-gray-600 transition-colors">
                     <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4"/>
                     </svg>
@@ -296,27 +372,178 @@ export default function ProductForm({
             />
           </div>
 
-          {/* ── PRICE ── */}
-          <div className="space-y-1.5">
-            <label className="text-sm font-semibold text-gray-800">
-              Price (Rs.) <span className="text-red-500">*</span>
-            </label>
-            <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-gray-500 font-medium">Rs.</span>
-              <input
-                type="number"
-                value={form.price}
-                onChange={e => setForm({ ...form, price: e.target.value })}
-                placeholder="4500"
-                className="w-full border border-gray-200 rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:border-black transition-colors bg-gray-50 focus:bg-white"
-              />
+          {/* ══════════════════════════════════════════════════
+               PRICING SECTION — Single or Tiered
+          ══════════════════════════════════════════════════ */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-semibold text-gray-800">
+                Pricing <span className="text-red-500">*</span>
+              </label>
+              {/* Toggle: Single price vs Tiered */}
+              <div className="flex items-center gap-2 bg-gray-100 rounded-xl p-1">
+                <button
+                  type="button"
+                  onClick={() => setUseTieredPricing(false)}
+                  className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                    !useTieredPricing ? 'bg-white shadow text-black' : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  Single Price
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setUseTieredPricing(true)}
+                  className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                    useTieredPricing ? 'bg-white shadow text-black' : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  Size-wise Price
+                </button>
+              </div>
             </div>
-            {form.price && (
-              <p className="text-xs text-amber-600 font-medium">
-                50% Advance = Rs.{Math.ceil(parseFloat(form.price) * 0.5).toLocaleString()}
-              </p>
+
+            {/* ── SINGLE PRICE MODE ── */}
+            {!useTieredPricing && (
+              <div className="space-y-1.5">
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-gray-500 font-medium">Rs.</span>
+                  <input
+                    type="number"
+                    value={form.price}
+                    onChange={e => setForm({ ...form, price: e.target.value })}
+                    placeholder="4500"
+                    className="w-full border border-gray-200 rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:border-black transition-colors bg-gray-50 focus:bg-white"
+                  />
+                </div>
+                {form.price && (
+                  <p className="text-xs text-amber-600 font-medium">
+                    50% Advance = Rs.{Math.ceil(parseFloat(form.price) * 0.5).toLocaleString()}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* ── TIERED PRICE MODE ── */}
+            {useTieredPricing && (
+              <div className="space-y-3">
+                <p className="text-xs text-gray-500 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
+                  💡 Har group ke liye price set karo. Customer jab size select karega, automatically woh group ka price show hoga.
+                </p>
+
+                {priceTiers.map((tier, idx) => (
+                  <div key={tier.id} className="border border-gray-200 rounded-xl overflow-hidden">
+                    {/* Tier Header */}
+                    <div className="flex items-center gap-2 bg-gray-50 px-4 py-3 border-b border-gray-100">
+                      <span className="text-xs font-bold text-gray-400 uppercase tracking-wide">Group {idx + 1}</span>
+                      <input
+                        value={tier.label}
+                        onChange={e => updateTierLabel(tier.id, e.target.value)}
+                        className="flex-1 text-sm font-semibold text-gray-800 bg-transparent border-none outline-none focus:bg-white focus:border focus:border-gray-200 focus:rounded px-1 py-0.5"
+                        placeholder="Group name e.g. Infant"
+                      />
+                      {priceTiers.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeTier(tier.id)}
+                          className="text-red-400 hover:text-red-600 transition-colors ml-auto"
+                          title="Remove this group"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                          </svg>
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="p-4 space-y-3">
+                      {/* Size pills for this tier */}
+                      <div>
+                        <p className="text-xs text-gray-500 mb-2 font-medium">Sizes (click to toggle):</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {ALL_SIZES.map(size => {
+                            const inThisTier = tier.sizes.includes(size);
+                            const inOtherTier = !inThisTier && assignedSizes.has(size);
+                            return (
+                              <button
+                                key={size}
+                                type="button"
+                                onClick={() => toggleSizeInTier(tier.id, size)}
+                                disabled={inOtherTier}
+                                title={inOtherTier ? 'Yeh size kisi aur group mein hai' : ''}
+                                className={`px-2.5 py-1 text-xs rounded-full border font-medium transition-all
+                                  ${inThisTier
+                                    ? 'bg-black text-white border-black'
+                                    : inOtherTier
+                                      ? 'border-gray-100 text-gray-300 bg-gray-50 cursor-not-allowed'
+                                      : 'border-gray-200 text-gray-600 hover:border-gray-800 bg-white'
+                                  }`}
+                              >
+                                {size}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        {tier.sizes.length === 0 && (
+                          <p className="text-xs text-amber-500 mt-1.5">⚠️ Koi size select nahi — yeh group save nahi hoga</p>
+                        )}
+                      </div>
+
+                      {/* Price for this tier */}
+                      <div className="flex items-center gap-3">
+                        <div className="relative flex-1">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400 font-medium">Rs.</span>
+                          <input
+                            type="number"
+                            value={tier.price}
+                            onChange={e => updateTierPrice(tier.id, e.target.value)}
+                            placeholder="e.g. 2000"
+                            className="w-full border border-gray-200 rounded-xl pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:border-black transition-colors bg-gray-50 focus:bg-white"
+                          />
+                        </div>
+                        {tier.price && (
+                          <p className="text-xs text-amber-600 font-medium whitespace-nowrap">
+                            50% = Rs.{Math.ceil(parseFloat(tier.price) * 0.5).toLocaleString()}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+
+                {/* Add Custom Tier Button */}
+                <button
+                  type="button"
+                  onClick={addCustomTier}
+                  className="w-full border-2 border-dashed border-gray-200 hover:border-gray-400 rounded-xl py-3 text-sm text-gray-500 hover:text-gray-700 font-medium transition-colors flex items-center justify-center gap-2"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4"/>
+                  </svg>
+                  Naya Price Group Add Karo
+                </button>
+
+                {/* Summary preview */}
+                {priceTiers.some(t => t.price && t.sizes.length > 0) && (
+                  <div className="bg-green-50 border border-green-100 rounded-xl p-3 space-y-1.5">
+                    <p className="text-xs font-bold text-green-700 uppercase tracking-wide">Price Summary</p>
+                    {priceTiers
+                      .filter(t => t.price && t.sizes.length > 0)
+                      .map(t => (
+                        <div key={t.id} className="flex items-center justify-between text-xs">
+                          <span className="text-gray-600">
+                            {t.label} <span className="text-gray-400">({t.sizes.length} sizes)</span>
+                          </span>
+                          <span className="font-bold text-gray-900">Rs. {parseFloat(t.price).toLocaleString()}</span>
+                        </div>
+                      ))
+                    }
+                  </div>
+                )}
+              </div>
             )}
           </div>
+          {/* ══ END PRICING SECTION ══ */}
 
           {/* ── SKU ── */}
           <div className="space-y-1.5">
@@ -338,8 +565,8 @@ export default function ProductForm({
               className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-black transition-colors bg-gray-50 focus:bg-white"
             >
               {CATEGORIES.map(c => (
-                <option key={c} value={c}>
-                  {c.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                <option key={c.value} value={c.value}>
+                  {c.label}
                 </option>
               ))}
             </select>
@@ -399,29 +626,31 @@ export default function ProductForm({
             />
           </div>
 
-          {/* ── SIZES ── */}
-          <div className="space-y-2">
-            <label className="text-sm font-semibold text-gray-800">
-              Available Sizes
-              <span className="text-gray-400 font-normal ml-1">({selectedSizes.length} selected)</span>
-            </label>
-            <div className="flex flex-wrap gap-2">
-              {ALL_SIZES.map(size => (
-                <button
-                  key={size}
-                  type="button"
-                  onClick={() => toggleSize(size)}
-                  className={`px-3 py-1.5 text-xs rounded-full border transition-all font-medium
-                    ${selectedSizes.includes(size)
-                      ? 'bg-black text-white border-black'
-                      : 'border-gray-200 text-gray-600 hover:border-gray-800 bg-white'
-                    }`}
-                >
-                  {size}
-                </button>
-              ))}
+          {/* ── SIZES (only shown in Single Price mode) ── */}
+          {!useTieredPricing && (
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-gray-800">
+                Available Sizes
+                <span className="text-gray-400 font-normal ml-1">({selectedSizes.length} selected)</span>
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {ALL_SIZES.map(size => (
+                  <button
+                    key={size}
+                    type="button"
+                    onClick={() => toggleSize(size)}
+                    className={`px-3 py-1.5 text-xs rounded-full border transition-all font-medium
+                      ${selectedSizes.includes(size)
+                        ? 'bg-black text-white border-black'
+                        : 'border-gray-200 text-gray-600 hover:border-gray-800 bg-white'
+                      }`}
+                  >
+                    {size}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* ── STOCK QUANTITY ── */}
           <div className="space-y-1.5">

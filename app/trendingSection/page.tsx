@@ -51,7 +51,7 @@ export default function TrendingSection() {
   const handleBuyItNow = () => {
     if (!selectedProduct) return;
     const phoneNumber = "923151640537";
-    const message = `Salam SWOC! I want to buy this product:\n\n*Product:* ${selectedProduct.title}\n*SKU:* ${selectedProduct.sku}\n*Size:* ${selectedSize}\n*Quantity:* ${quantity}\n*Total Price:* Rs.${(selectedProduct.numericPrice * quantity).toLocaleString()}`;
+    const message = `Salam Cute minimos! I want to buy this product:\n\n*Product:* ${selectedProduct.title}\n*SKU:* ${selectedProduct.sku}\n*Size:* ${selectedSize}\n*Quantity:* ${quantity}\n*Total Price:* Rs.${(selectedProduct.numericPrice * quantity).toLocaleString()}`;
     window.open(`https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`, '_blank');
   };
 

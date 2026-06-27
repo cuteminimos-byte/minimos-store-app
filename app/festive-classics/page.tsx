@@ -41,7 +41,7 @@ export default function FestiveClassicsPage() {
     const advance = Math.ceil(selectedProduct.price * quantity * 0.5);
     const total = selectedProduct.price * quantity;
     const phone = "923151640537";
-    const msg = `Salam SWOC! I want to buy:\n\n*Product:* ${selectedProduct.title}\n*SKU:* ${selectedProduct.sku}\n*Size:* ${selectedSize}\n*Quantity:* ${quantity}\n*Total:* Rs.${total.toLocaleString()}\n*50% Advance:* Rs.${advance.toLocaleString()}`;
+    const msg = `Salam cute minimos! I want to buy:\n\n*Product:* ${selectedProduct.title}\n*SKU:* ${selectedProduct.sku}\n*Size:* ${selectedSize}\n*Quantity:* ${quantity}\n*Total:* Rs.${total.toLocaleString()}\n*50% Advance:* Rs.${advance.toLocaleString()}`;
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
   };
 

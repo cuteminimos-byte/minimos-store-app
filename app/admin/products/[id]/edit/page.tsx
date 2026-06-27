@@ -43,6 +43,7 @@ export default function EditProduct() {
       stock_quantity: product.stock_quantity?.toString() || '',
       images: product.images || [],
       sizes: product.sizes || [],
+      price_tiers: product.price_tiers || [], // ✅ yeh missing tha
     });
     setLoading(false);
   };

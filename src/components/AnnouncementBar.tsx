@@ -37,7 +37,7 @@ export default function AnnouncementBar() {
 
           {/* Loop Item 3 */}
           <span className="shrink-0">
-            Standard delivery time: 4-6 weeks | For custom queries/orders, please WhatsApp us at{' '}
+            Standard delivery time: 2 to 3 weeks | For custom queries/orders, please WhatsApp us at{' '}
             <span className="font-bold text-black font-sans tracking-normal">
               +92 315-1640537 / +92 315-1640537
             </span>

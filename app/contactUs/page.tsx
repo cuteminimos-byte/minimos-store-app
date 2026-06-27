@@ -126,12 +126,12 @@ export default function ContactUsPage() {
 
               <div>
                 <p className="font-semibold text-gray-800">Customer Complaint: (9:00am – 5:00pm)</p>
-                <p className="text-gray-900 font-medium">+92 300 100 3187</p>
+                <p className="text-gray-900 font-medium">+92923001803448</p>
               </div>
 
               <div>
                 <p className="font-semibold text-gray-800">General Information: (9:00am – 9:00pm)</p>
-                <p className="text-gray-900 font-medium">+92 300 180 3448</p>
+                <p className="text-gray-900 font-medium">+92923001803448</p>
               </div>
             </div>
           </div>
@@ -158,7 +158,7 @@ export default function ContactUsPage() {
 
           {/* Postal Address */}
           <div className="text-[13px] md:text-[14px] text-gray-600 leading-relaxed pt-4 border-t border-gray-200/60">
-            <p>15-km, Hafizabad Road, Adjacent Qila Marriage Hall, Qila Didar Singh, Gujranwala</p>
+            <p>Chak no 5/11.l gakhranwala near harrappa toll plaza City Chichawatni</p>
           </div>
         </div>
 

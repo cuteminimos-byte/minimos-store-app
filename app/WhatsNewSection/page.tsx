@@ -6,23 +6,36 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Pagination, Autoplay, Navigation } from 'swiper/modules';
+import { CATEGORIES } from '@/lib/categories'; // ✅ shared categories — admin & header sync
 
 import 'swiper/css';
 import 'swiper/css/pagination';
 import 'swiper/css/navigation';
 
+// ── Image mapping ──────────────────────────────────────────────
+// Purani images yahan reuse ki gayi hain. Naya image lagana ho to
+// bas us category ke 'value' ke against path daal do.
+const SLIDE_IMAGES: Record<string, string> = {
+  'summer-basics':    '/images/image1.jpeg',
+  'hand-embroidered': '/images/image2.jpeg',
+  'hand-painted':      '/images/image3.jpeg',
+  'shadi-season':      '/images/image7.jpeg',
+  'mommy-and-me':      '/images/image8.jpeg',
+  'siblings-duo':      '/images/image9.jpeg',
+};
+
 function WhatsNewSectionContent() {
     const searchParams = useSearchParams();
     const searchQuery = searchParams.get('query')?.toLowerCase() || '';
 
-    const products = [
-        { id: 1, title: "Crochet & Knit Drop.", src: "/images/image1.jpeg", link: "/whats-new/crochet-knit" },
-        { id: 2, title: "Velvet Classics", src: "/images/image2.jpeg", link: "/whats-new/velvet-classics" },
-        { id: 3, title: "Ready To Ship", src: "/images/image3.jpeg", link: "/whats-new/ready-to-ship" },
-        { id: 4, title: "B.Pair Clearance", src: "/images/image7.jpeg", link: "/whats-new/clearance" },
-        { id: 5, title: "14 August", src: "/images/image8.jpeg", link: "/whats-new/august-collection" },
-        { id: 6, title: "Winter Specials", src: "/images/image9.jpeg", link: "/whats-new/winter-specials" }
-    ];
+    // ✅ Pehli 6 categories shared list se — title, link, aur image
+    // sab automatically sync rahenge admin panel aur header ke saath.
+    const products = CATEGORIES.slice(0, 6).map((cat) => ({
+        id: cat.value,
+        title: cat.label,
+        src: SLIDE_IMAGES[cat.value] || '/images/image1.jpeg',
+        link: `/category/${cat.value}`,
+    }));
 
     const filteredProducts = products.filter(product =>
         product.title.toLowerCase().includes(searchQuery)

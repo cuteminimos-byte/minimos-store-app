@@ -5,6 +5,14 @@ import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 
+/* ── Types ── */
+type PriceTier = {
+  id: string;
+  label: string;
+  sizes: string[];
+  price: string;
+};
+
 type Product = {
   id: string;
   title: string;
@@ -15,18 +23,60 @@ type Product = {
   category: string;
   description: string;
   in_stock: boolean;
+  price_tiers?: PriceTier[];
 };
 
-const PHONE = "923151640537";
+type CartItem = {
+  cartId: string;
+  productId: string;
+  title: string;
+  sku: string;
+  price: number;
+  image: string;
+  size: string;
+  quantity: number;
+};
 
+const PHONE    = "923151640537";
+const CART_KEY = "cute_minimos_cart";          // ✅ matches CartBar in HomeCarousel page
+const CART_EVT = "cute-minimos-updated";       // ✅ matches CartBar event listener
+
+/* ── Cart helpers ── */
+function readCart(): CartItem[] {
+  if (typeof window === 'undefined') return [];
+  try { return JSON.parse(localStorage.getItem(CART_KEY) || '[]'); }
+  catch { return []; }
+}
+
+function writeCart(items: CartItem[]) {
+  localStorage.setItem(CART_KEY, JSON.stringify(items));
+  window.dispatchEvent(new CustomEvent(CART_EVT)); // ✅ CartBar will now hear this
+}
+
+/* ── Price helper ── */
+function getPriceForSize(
+  size: string,
+  tiers: PriceTier[] | undefined,
+  basePrice: number
+): number {
+  if (!size || !tiers?.length) return basePrice;
+  const tier = tiers.find(t => t.sizes.includes(size));
+  return tier?.price ? parseFloat(tier.price) : basePrice;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   MAIN COMPONENT
+══════════════════════════════════════════════════════════════ */
 export default function ProductDetailPage() {
   const { id } = useParams();
-  const router = useRouter();
-  const [product, setProduct] = useState<Product | null>(null);
-  const [loading, setLoading] = useState(true);
+  const router  = useRouter();
+
+  const [product, setProduct]             = useState<Product | null>(null);
+  const [loading, setLoading]             = useState(true);
   const [selectedImage, setSelectedImage] = useState(0);
-  const [selectedSize, setSelectedSize] = useState('');
-  const [quantity, setQuantity] = useState(1);
+  const [selectedSize, setSelectedSize]   = useState('');
+  const [quantity, setQuantity]           = useState(1);
+  const [added, setAdded]                 = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -42,6 +92,7 @@ export default function ProductDetailPage() {
       });
   }, [id]);
 
+  /* ── Loading / not found ── */
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center">
       <div className="flex gap-2 text-gray-400 text-sm">
@@ -61,15 +112,54 @@ export default function ProductDetailPage() {
     </div>
   );
 
-  const images = product.images?.length ? product.images : ['/images/image1.jpeg'];
-  const advance = Math.ceil(product.price * quantity * 0.5);
-  const total = product.price * quantity;
+  /* ── Derived values ── */
+  const images       = product.images?.length ? product.images : ['/images/image1.jpeg'];
+  const hasTiers     = !!(product.price_tiers?.length);
+  const currentPrice = getPriceForSize(selectedSize, product.price_tiers, product.price);
+  const advance      = Math.ceil(currentPrice * quantity * 0.5);
+  const total        = currentPrice * quantity;
 
+  /* ── Handlers ── */
   const handleBuy = () => {
-    const msg = `Salam SWOC! I want to buy:\n\n*Product:* ${product.title}\n*SKU:* ${product.sku}\n*Size:* ${selectedSize}\n*Quantity:* ${quantity}\n*Total:* Rs.${total.toLocaleString()}\n*50% Advance:* Rs.${advance.toLocaleString()}`;
+    const msg =
+      `Salam Cute minimos! I want to buy:\n\n` +
+      `*Product:* ${product.title}\n` +
+      `*SKU:* ${product.sku}\n` +
+      `*Size:* ${selectedSize}\n` +
+      `*Quantity:* ${quantity}\n` +
+      `*Total:* Rs.${total.toLocaleString()}\n` +
+      `*50% Advance:* Rs.${advance.toLocaleString()}`;
     window.open(`https://wa.me/${PHONE}?text=${encodeURIComponent(msg)}`, '_blank');
   };
 
+  const handleAddToCart = () => {
+    const cart     = readCart();
+    const cartId   = `${product.id}-${selectedSize}`;
+    const existing = cart.find(i => i.cartId === cartId);
+
+    const updated: CartItem[] = existing
+      ? cart.map(i => i.cartId === cartId
+          ? { ...i, quantity: i.quantity + quantity }
+          : i)
+      : [...cart, {
+          cartId,
+          productId: product.id,
+          title:     product.title,
+          sku:       product.sku || '',
+          price:     currentPrice,
+          image:     images[0],
+          size:      selectedSize,
+          quantity,
+        }];
+
+    writeCart(updated);
+    setAdded(true);
+    setTimeout(() => setAdded(false), 2000);
+  };
+
+  /* ══════════════════════════════════════════════════════════
+     RENDER
+  ══════════════════════════════════════════════════════════ */
   return (
     <div className="w-full max-w-6xl mx-auto px-4 py-8 md:py-12">
 
@@ -77,7 +167,9 @@ export default function ProductDetailPage() {
       <div className="flex items-center gap-2 text-xs text-gray-400 mb-8">
         <button onClick={() => router.push('/')} className="hover:text-gray-700 transition-colors">Home</button>
         <span>/</span>
-        <button onClick={() => router.push(`/category/${product.category}`)} className="hover:text-gray-700 transition-colors capitalize">{product.category.replace(/-/g, ' ')}</button>
+        <button onClick={() => router.push(`/category/${product.category}`)} className="hover:text-gray-700 transition-colors capitalize">
+          {product.category.replace(/-/g, ' ')}
+        </button>
         <span>/</span>
         <span className="text-gray-700">{product.title}</span>
       </div>
@@ -87,7 +179,6 @@ export default function ProductDetailPage() {
 
         {/* LEFT: Images */}
         <div className="flex flex-col gap-3">
-          {/* Main Image */}
           <div className="relative aspect-[4/5] w-full bg-gray-50 overflow-hidden rounded-xl">
             <Image
               src={images[selectedImage]}
@@ -104,14 +195,14 @@ export default function ProductDetailPage() {
             )}
           </div>
 
-          {/* Thumbnails */}
           {images.length > 1 && (
             <div className="flex gap-2 overflow-x-auto pb-1">
               {images.map((img, i) => (
                 <button
                   key={i}
                   onClick={() => setSelectedImage(i)}
-                  className={`relative w-16 h-20 flex-shrink-0 rounded-lg overflow-hidden border-2 transition-all ${selectedImage === i ? 'border-black' : 'border-gray-200 hover:border-gray-400'}`}
+                  className={`relative w-16 h-20 flex-shrink-0 rounded-lg overflow-hidden border-2 transition-all
+                    ${selectedImage === i ? 'border-black' : 'border-gray-200 hover:border-gray-400'}`}
                 >
                   <Image src={img} alt={`thumb-${i}`} fill className="object-cover" unoptimized />
                 </button>
@@ -130,20 +221,27 @@ export default function ProductDetailPage() {
           </div>
 
           {/* Price */}
-          <div className="flex items-baseline gap-3">
-            <span className="text-2xl font-bold text-gray-900">Rs.{product.price.toLocaleString()}</span>
+          <div>
+            <span className="text-2xl font-bold text-gray-900">
+              Rs.{currentPrice.toLocaleString()}
+            </span>
+            {hasTiers && (
+              <p className="text-[11px] text-blue-500 font-medium mt-1">
+                ↕ Size badalne pe price change hogi
+              </p>
+            )}
           </div>
 
-          {/* 50% Advance Box */}
+          {/* Payment Info Box */}
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-1">
             <p className="text-xs font-bold text-amber-800 uppercase tracking-wider">Payment Info</p>
             <div className="flex justify-between text-sm">
               <span className="text-gray-600">50% Advance (required):</span>
-              <span className="font-bold text-amber-700">Rs.{Math.ceil(product.price * 0.5).toLocaleString()}</span>
+              <span className="font-bold text-amber-700">Rs.{Math.ceil(currentPrice * 0.5).toLocaleString()}</span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-gray-600">Remaining on delivery:</span>
-              <span className="font-bold text-gray-700">Rs.{Math.floor(product.price * 0.5).toLocaleString()}</span>
+              <span className="font-bold text-gray-700">Rs.{Math.floor(currentPrice * 0.5).toLocaleString()}</span>
             </div>
           </div>
 
@@ -151,22 +249,35 @@ export default function ProductDetailPage() {
           {product.sizes?.length > 0 && (
             <div>
               <div className="flex items-center justify-between mb-2">
-                <p className="text-sm font-semibold text-gray-700">Size: <span className="font-bold text-gray-900">{selectedSize}</span></p>
+                <p className="text-sm font-semibold text-gray-700">
+                  Size: <span className="font-bold text-gray-900">{selectedSize}</span>
+                </p>
               </div>
               <div className="flex flex-wrap gap-2">
-                {product.sizes.map((size) => (
-                  <button
-                    key={size}
-                    onClick={() => setSelectedSize(size)}
-                    className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-all
-                      ${selectedSize === size
-                        ? 'bg-black text-white border-black'
-                        : 'border-gray-300 text-gray-700 hover:border-gray-800 bg-white'
-                      }`}
-                  >
-                    {size}
-                  </button>
-                ))}
+                {product.sizes.map((size) => {
+                  const sizePrice = hasTiers
+                    ? getPriceForSize(size, product.price_tiers, product.price)
+                    : null;
+                  return (
+                    <button
+                      key={size}
+                      onClick={() => setSelectedSize(size)}
+                      className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-all
+                        ${selectedSize === size
+                          ? 'bg-black text-white border-black'
+                          : 'border-gray-300 text-gray-700 hover:border-gray-800 bg-white'
+                        }`}
+                    >
+                      {size}
+                      {hasTiers && sizePrice && (
+                        <span className={`block text-[9px] leading-tight mt-0.5
+                          ${selectedSize === size ? 'text-gray-300' : 'text-gray-400'}`}>
+                          {sizePrice.toLocaleString()}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -175,9 +286,9 @@ export default function ProductDetailPage() {
           <div>
             <p className="text-sm font-semibold text-gray-700 mb-2">Quantity:</p>
             <div className="inline-flex items-center border border-gray-300 rounded-lg overflow-hidden">
-              <button onClick={() => setQuantity(p => Math.max(1, p - 1))} className="px-4 py-2.5 text-gray-600 hover:bg-gray-50 text-lg font-medium transition-colors">&minus;</button>
+              <button onClick={() => setQuantity(p => Math.max(1, p - 1))} className="px-4 py-2.5 text-gray-600 hover:bg-gray-50 text-lg font-medium">&minus;</button>
               <span className="w-12 text-center text-sm font-bold text-gray-900">{quantity}</span>
-              <button onClick={() => setQuantity(p => p + 1)} className="px-4 py-2.5 text-gray-600 hover:bg-gray-50 text-lg font-medium transition-colors">&#43;</button>
+              <button onClick={() => setQuantity(p => p + 1)} className="px-4 py-2.5 text-gray-600 hover:bg-gray-50 text-lg font-medium">&#43;</button>
             </div>
           </div>
 
@@ -200,8 +311,17 @@ export default function ProductDetailPage() {
               </svg>
               Order via WhatsApp
             </button>
-            <button className="w-full bg-white text-gray-900 border border-gray-900 py-4 text-sm font-bold uppercase tracking-wider rounded-xl hover:bg-gray-900 hover:text-white transition-colors">
-              Add to Cart
+
+            <button
+              onClick={handleAddToCart}
+              disabled={!product.in_stock}
+              className={`w-full py-4 text-sm font-bold uppercase tracking-wider rounded-xl transition-colors duration-300 border disabled:opacity-40 disabled:cursor-not-allowed
+                ${added
+                  ? 'bg-green-600 text-white border-green-600'
+                  : 'bg-white text-gray-900 border-gray-900 hover:bg-gray-900 hover:text-white'
+                }`}
+            >
+              {added ? '✓ Added to Cart!' : 'Add to Cart'}
             </button>
           </div>
 

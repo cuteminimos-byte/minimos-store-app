@@ -8,6 +8,7 @@ import { Swiper, SwiperSlide } from 'swiper/react';
 import { Pagination, Autoplay, Navigation } from 'swiper/modules';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { CATEGORIES } from '@/lib/categories';
 
 import 'swiper/css';
 import 'swiper/css/pagination';
@@ -16,6 +17,13 @@ import 'swiper/css/navigation';
 /* ============================================================
    TYPES
    ============================================================ */
+type PriceTier = {
+  id: string;
+  label: string;
+  sizes: string[];
+  price: string;
+};
+
 type Product = {
   id: string;
   title: string;
@@ -25,7 +33,8 @@ type Product = {
   sizes: string[];
   category: string;
   in_stock: boolean;
-  section?: string; // 'new-arrivals' | 'festival'
+  section?: string;
+  price_tiers?: PriceTier[];
 };
 
 type CartItem = {
@@ -46,10 +55,23 @@ const SIZES_LIST = [
 ];
 
 const PHONE = "923151640537";
-const CART_STORAGE_KEY = "swoc_cart";
+const CART_STORAGE_KEY = "cute_minimos_cart";
 
 /* ============================================================
-   CART HELPERS (localStorage based, shared across this page)
+   PRICE HELPER
+   ============================================================ */
+function getPriceForSize(
+  selectedSize: string | null,
+  priceTiers: PriceTier[] | undefined,
+  basePrice: number
+): number {
+  if (!selectedSize || !priceTiers?.length) return basePrice;
+  const tier = priceTiers.find(t => t.sizes.includes(selectedSize));
+  return tier?.price ? parseFloat(tier.price) : basePrice;
+}
+
+/* ============================================================
+   CART HELPERS
    ============================================================ */
 function readCart(): CartItem[] {
   if (typeof window === 'undefined') return [];
@@ -64,7 +86,7 @@ function readCart(): CartItem[] {
 function writeCart(items: CartItem[]) {
   if (typeof window === 'undefined') return;
   localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
-  window.dispatchEvent(new CustomEvent('swoc-cart-updated'));
+  window.dispatchEvent(new CustomEvent('cute-minimos-updated'));
 }
 
 /* ============================================================
@@ -72,9 +94,9 @@ function writeCart(items: CartItem[]) {
    ============================================================ */
 function HomeCarousel() {
   const slides = [
-    { id: 1, src: "/images/image6.png",  alt: "Cute minimos" },
-    { id: 2, src: "/images/image4.png",  alt: "Cute minimos" },
-    { id: 3, src: "/images/image5.png",  alt: "Cute minimos" },
+    { id: 1, src: "/images/image6.png", alt: "Cute minimos" },
+    { id: 2, src: "/images/image4.png", alt: "Cute minimos" },
+    { id: 3, src: "/images/image5.png", alt: "Cute minimos" },
   ];
 
   return (
@@ -121,20 +143,19 @@ function HomeCarousel() {
 }
 
 /* ============================================================
-   2. CART BAR (top of page) + CART DRAWER + FLOATING ICON
+   2. CART BAR + CART DRAWER + FLOATING ICON
    ============================================================ */
 function CartBar() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [addedId, setAddedId] = useState<string | null>(null);
 
   useEffect(() => {
     setCart(readCart());
     const handler = () => setCart(readCart());
-    window.addEventListener('cute minimos-cart-updated', handler);
+    window.addEventListener('cute-minimos-updated', handler);
     window.addEventListener('storage', handler);
     return () => {
-      window.removeEventListener('swoc-cart-updated', handler);
+      window.removeEventListener('cute-minimos-updated', handler);
       window.removeEventListener('storage', handler);
     };
   }, []);
@@ -157,15 +178,11 @@ function CartBar() {
     writeCart(updated);
   };
 
-  const clearCart = () => {
-    setCart([]);
-    writeCart([]);
-  };
+  const clearCart = () => { setCart([]); writeCart([]); };
 
   const handleCheckoutWhatsApp = () => {
     if (cart.length === 0) return;
-
-    let msg = `Salam SWOC! I want to order the following items:\n\n`;
+    let msg = `Salam Cute minimos! I want to order the following items:\n\n`;
     cart.forEach((item, i) => {
       const lineTotal = item.price * item.quantity;
       msg += `*${i + 1}. ${item.title}*\n`;
@@ -178,23 +195,19 @@ function CartBar() {
     msg += `*Grand Total:* Rs.${totalPrice.toLocaleString()}\n`;
     msg += `*50% Advance Required:* Rs.${totalAdvance.toLocaleString()}\n`;
     msg += `*Remaining on Delivery:* Rs.${(totalPrice - totalAdvance).toLocaleString()}`;
-
     window.open(`https://wa.me/${PHONE}?text=${encodeURIComponent(msg)}`, '_blank');
   };
 
   return (
     <>
-      {/* Top Cart Bar */}
       <div className="w-full bg-white border-b border-gray-100 sticky top-0 z-40 px-4 md:px-8 py-3 flex items-center justify-between shadow-sm">
         <Link href="/" className="font-serif font-bold text-lg text-gray-900 tracking-wide">
           Cute <span className="text-gray-400 font-normal">minimos</span>
         </Link>
-
         <button
           onClick={() => setDrawerOpen(true)}
           className="relative flex items-center gap-2 bg-black text-white px-4 py-2 rounded-full text-sm font-semibold hover:bg-gray-800 transition-colors"
         >
-          {/* Cart Icon SVG */}
           <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
           </svg>
@@ -207,12 +220,10 @@ function CartBar() {
         </button>
       </div>
 
-      {/* Floating Cart Button (bottom-right) */}
       {totalItems > 0 && (
         <button
           onClick={() => setDrawerOpen(true)}
           className="fixed bottom-6 right-6 z-50 bg-black text-white w-14 h-14 rounded-full shadow-2xl flex items-center justify-center hover:bg-gray-800 transition-all duration-300 hover:scale-110 active:scale-95"
-          aria-label="Open cart"
         >
           <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
@@ -223,11 +234,9 @@ function CartBar() {
         </button>
       )}
 
-      {/* Cart Drawer */}
       {drawerOpen && (
         <div className="fixed inset-0 z-50 flex justify-end">
           <div className="absolute inset-0 bg-black/50" onClick={() => setDrawerOpen(false)} />
-
           <div className="relative w-full max-w-md bg-white h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
             <div className="flex items-center justify-between p-5 border-b border-gray-100">
               <h2 className="text-lg font-serif font-bold text-gray-900">Your Cart ({totalItems})</h2>
@@ -237,7 +246,6 @@ function CartBar() {
                 </svg>
               </button>
             </div>
-
             <div className="flex-1 overflow-y-auto p-5 space-y-4">
               {cart.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-center gap-3">
@@ -257,23 +265,19 @@ function CartBar() {
                       <p className="text-xs text-gray-400 mt-0.5">Size: {item.size}</p>
                       <p className="text-xs text-gray-400">SKU: {item.sku || 'N/A'}</p>
                       <p className="text-sm font-semibold text-gray-900 mt-1">Rs.{item.price.toLocaleString()}</p>
-
                       <div className="flex items-center justify-between mt-2">
                         <div className="inline-flex items-center border border-gray-300 rounded-lg">
                           <button onClick={() => updateQuantity(item.cartId, -1)} className="px-2.5 py-1 text-gray-600 hover:bg-gray-50 text-sm">&minus;</button>
                           <span className="w-7 text-center text-xs font-bold text-gray-900">{item.quantity}</span>
                           <button onClick={() => updateQuantity(item.cartId, 1)} className="px-2.5 py-1 text-gray-600 hover:bg-gray-50 text-sm">&#43;</button>
                         </div>
-                        <button onClick={() => removeItem(item.cartId)} className="text-red-400 hover:text-red-600 text-xs font-medium">
-                          Remove
-                        </button>
+                        <button onClick={() => removeItem(item.cartId)} className="text-red-400 hover:text-red-600 text-xs font-medium">Remove</button>
                       </div>
                     </div>
                   </div>
                 ))
               )}
             </div>
-
             {cart.length > 0 && (
               <div className="border-t border-gray-100 p-5 space-y-3">
                 <div className="flex justify-between text-sm">
@@ -284,7 +288,6 @@ function CartBar() {
                   <span className="text-amber-700 font-medium">50% Advance Required</span>
                   <span className="font-bold text-amber-700">Rs.{totalAdvance.toLocaleString()}</span>
                 </div>
-
                 <button
                   onClick={handleCheckoutWhatsApp}
                   className="w-full bg-black text-white py-3.5 rounded-xl text-sm font-bold hover:bg-gray-800 transition-colors flex items-center justify-center gap-2"
@@ -295,10 +298,7 @@ function CartBar() {
                   </svg>
                   Checkout via WhatsApp
                 </button>
-                <button
-                  onClick={clearCart}
-                  className="w-full text-gray-400 hover:text-red-500 text-xs font-medium py-1 transition-colors"
-                >
+                <button onClick={clearCart} className="w-full text-gray-400 hover:text-red-500 text-xs font-medium py-1 transition-colors">
                   Clear cart
                 </button>
               </div>
@@ -312,19 +312,34 @@ function CartBar() {
 
 /* ============================================================
    3. WHAT'S NEW SECTION
+   — Fixed: all items now have unique IDs (no more duplicate key=6)
+   — Images mapped per category value
    ============================================================ */
+
+// Image map — category value → image path
+const WHATS_NEW_IMAGES: Record<string, string> = {
+  'summer-basics':    '/images/image1.jpeg',
+  'hand-embroidered': '/images/image2.jpeg',
+  'hand-painted':     '/images/image3.jpeg',
+  'shadi-season':     '/images/image7.jpeg',
+  'mommy-and-me':     '/images/image8.jpeg',
+  'siblings-duo':     '/images/image7 (3).jpeg',
+  'b-boys':           '/images/image17.png', // replace when you have a dedicated image
+  'women-classic':    '/images/image9.jpeg', // replace when you have a dedicated image
+  'accessories':      '/images/image1z.jpeg', // replace when you have a dedicated image
+};
+
 function WhatsNewSectionInner() {
   const searchParams = useSearchParams();
   const searchQuery = searchParams.get('query')?.toLowerCase() || '';
 
-  const products = [
-    { id: 1, title: "Crochet & Knit Drop.", src: "/images/image1.jpeg", link: "/category/crochet-knit-drop" },
-    { id: 2, title: "Velvet Classics",       src: "/images/image2.jpeg", link: "/category/festive-classics"  },
-    { id: 3, title: "Ready To Ship",          src: "/images/image3.jpeg", link: "/category/readyToShip"       },
-    { id: 4, title: "B.Pair Clearance",       src: "/images/image7.jpeg", link: "/category/accessories"       },
-    { id: 5, title: "14 August",              src: "/images/image8.jpeg", link: "/category/festive-classics"  },
-    { id: 6, title: "Winter Specials",        src: "/images/image9.jpeg", link: "/category/crochet-knit-drop" },
-  ];
+  // Build products from shared CATEGORIES — always in sync, no duplicate IDs
+  const products = CATEGORIES.map((cat) => ({
+    id: cat.value,           // unique slug — no more id:6 collision
+    title: cat.label,
+    src: WHATS_NEW_IMAGES[cat.value] || '/images/image1.jpeg',
+    link: `/category/${cat.value}`,
+  }));
 
   const filtered = products.filter(p =>
     p.title.toLowerCase().includes(searchQuery)
@@ -381,18 +396,13 @@ function WhatsNewSectionInner() {
             </SwiperSlide>
           ))}
         </Swiper>
-
         {filtered.length > 1 && (
           <>
             <button className="whatsnew-prev-btn absolute left-4 md:left-0.5 top-[40%] -translate-y-1/2 z-30 bg-black text-white w-12 h-9 md:w-16 md:h-11 rounded-xl flex items-center justify-center cursor-pointer hover:bg-neutral-900 shadow-md">
-              <svg className="w-9 h-9" fill="none" stroke="currentColor" strokeWidth="1.3" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M22 12H2M2 12L8 6M2 12L8 18"/>
-              </svg>
+              <svg className="w-9 h-9" fill="none" stroke="currentColor" strokeWidth="1.3" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M22 12H2M2 12L8 6M2 12L8 18"/></svg>
             </button>
             <button className="whatsnew-next-btn absolute right-4 md:right-0.5 top-[40%] -translate-y-1/2 z-30 bg-black text-white w-12 h-9 md:w-16 md:h-11 rounded-xl flex items-center justify-center cursor-pointer hover:bg-neutral-900 shadow-md">
-              <svg className="w-9 h-9" fill="none" stroke="currentColor" strokeWidth="1.3" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M2 12H22M22 12L16 6M22 12L16 18"/>
-              </svg>
+              <svg className="w-9 h-9" fill="none" stroke="currentColor" strokeWidth="1.3" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M2 12H22M22 12L16 6M22 12L16 18"/></svg>
             </button>
           </>
         )}
@@ -411,53 +421,40 @@ function WhatsNewSection() {
 
 /* ============================================================
    4. SHOP BY CATEGORY SECTION
+   — Swiper replaced with a clean 3-card grid
+   — Uses real images: image7, image8, image3
+   — Only 3 highlighted categories shown
    ============================================================ */
 function ShopByCategorySection() {
-  const categories = [
-    { id: 1, title: "Boys",  src: "/images/image17.png",  link: "/category/boys",  isComingSoon: false },
-    { id: 2, title: "Girls", src: "/images/image14.jpeg", link: "/category/girls", isComingSoon: false },
-    { id: 3, title: "Men",   src: "/images/image18.png",  link: "/category/men",   isComingSoon: false },
-    { id: 4, title: "Women", src: "",                     link: "#",               isComingSoon: true  },
+  const featured = [
+    { id: 'shadi-season', title: 'Shadi Season', src: '/images/image7.jpeg', link: '/category/shadi-season'   },
+    { id: 'mommy-and-me', title: 'Mommy And Me', src: '/images/image8.jpeg', link: '/category/mommy-and-me'   },
+    { id: 'hand-painted', title: 'Hand Painted',  src: '/images/image3.jpeg', link: '/category/hand-painted'   },
   ];
 
   return (
-    <section className="w-full max-w-3xl text-left ml-4 md:ml-16 mr-auto -mt-10 md:-mt-20 pt-4 md:pt-6 pb-16 md:pb-24 select-none">
-      <div className="mb-10 pl-1">
-        <h2 className="text-xl md:text-4xl text-center ml-96 font-serif text-gray-900 tracking-wide">
-          Shop By Category
-        </h2>
+    <section className="w-full max-w-6xl mx-auto px-4 -mt-10 md:-mt-20 pt-4 md:pt-6 pb-16 md:pb-24 select-none">
+      <div className="mb-10 text-center">
+        <h2 className="text-xl md:text-4xl font-serif text-gray-900 tracking-wide">Shop By Category</h2>
       </div>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-5 items-center">
-        {categories.map((cat) => (
-          <div key={cat.id} className="space-y-4 text-center group/cat-card cursor-pointer">
-            {cat.isComingSoon ? (
-              <div className="aspect-[4/5.8] w-full bg-[#f6edeb] rounded-xl flex items-center justify-center relative overflow-hidden border border-[#eae0dc] translate-y-4 transition-transform duration-500 group-hover/cat-card:scale-103">
-                <div className="absolute inset-0 opacity-15 pointer-events-none bg-[radial-gradient(#1a1110_1.5px,transparent_1.5px)] [background-size:16px_16px]" />
-                <span className="font-serif text-[#7d564f] text-sm md:text-xl tracking-widest leading-relaxed block uppercase font-medium text-center">
-                  Coming<br/>Soon
-                </span>
-              </div>
-            ) : (
-              <Link href={cat.link} className="block">
-                <div className="aspect-[4/5] w-full bg-[#f6f6f6] rounded-xl overflow-hidden relative border border-gray-100 shadow-xs">
-                  <Image
-                    src={cat.src}
-                    alt={cat.title}
-                    fill
-                    sizes="(max-width: 768px) 50vw, 25vw"
-                    className="object-cover object-center transition-transform duration-500 group-hover/cat-card:scale-103"
-                    unoptimized
-                  />
-                </div>
-              </Link>
-            )}
-            <div className="pt-1">
-              <h3 className="text-[14px] md:text-[15px] font-bold text-gray-900 tracking-normal inline-block relative pb-0.5">
-                {cat.title}
-                <span className="absolute left-0 bottom-0 w-full h-[1.5px] bg-black scale-x-0 origin-bottom-left transition-transform duration-300 ease-out group-hover/cat-card:scale-x-100" />
-              </h3>
+      <div className="grid grid-cols-3 gap-4 md:gap-6">
+        {featured.map((cat) => (
+          <Link key={cat.id} href={cat.link} className="block group/cat-card cursor-pointer space-y-3 text-center">
+            <div className="aspect-[3/4] w-full bg-[#f6f6f6] rounded-xl overflow-hidden relative border border-gray-100 shadow-xs">
+              <Image
+                src={cat.src}
+                alt={cat.title}
+                fill
+                sizes="(max-width: 768px) 33vw, 20vw"
+                className="object-cover object-center transition-transform duration-500 group-hover/cat-card:scale-105"
+                unoptimized
+              />
             </div>
-          </div>
+            <h3 className="text-[13px] md:text-[15px] font-bold text-gray-900 tracking-normal inline-block relative pb-0.5">
+              {cat.title}
+              <span className="absolute left-0 bottom-0 w-full h-[1.5px] bg-black scale-x-0 origin-bottom-left transition-transform duration-300 ease-out group-hover/cat-card:scale-x-100" />
+            </h3>
+          </Link>
         ))}
       </div>
     </section>
@@ -465,39 +462,37 @@ function ShopByCategorySection() {
 }
 
 /* ============================================================
-   5. QUICK VIEW MODAL — fixed Add to Cart
+   5. QUICK VIEW MODAL
    ============================================================ */
 function QuickViewModal({ product, onClose }: { product: Product; onClose: () => void }) {
   const router = useRouter();
   const [quantity, setQuantity] = useState(1);
   const [selectedSize, setSelectedSize] = useState(product.sizes?.[0] || 'New Born');
   const [added, setAdded] = useState(false);
+
   const sizes = product.sizes?.length ? product.sizes : SIZES_LIST;
   const image = product.images?.[0] || '/images/image1.jpeg';
-  const advance = Math.ceil(product.price * quantity * 0.5);
-  const total = product.price * quantity;
+
+  const currentPrice = getPriceForSize(selectedSize, product.price_tiers, product.price);
+  const hasTiers = !!(product.price_tiers?.length);
+  const advance = Math.ceil(currentPrice * quantity * 0.5);
+  const total = currentPrice * quantity;
 
   const handleBuy = () => {
-    const msg = `Salam SWOC! I want to buy:\n\n*Product:* ${product.title}\n*SKU:* ${product.sku}\n*Size:* ${selectedSize}\n*Quantity:* ${quantity}\n*Total:* Rs.${total.toLocaleString()}\n*50% Advance:* Rs.${advance.toLocaleString()}`;
+    const msg = `Salam Cute minimos! I want to buy:\n\n*Product:* ${product.title}\n*SKU:* ${product.sku}\n*Size:* ${selectedSize}\n*Quantity:* ${quantity}\n*Total:* Rs.${total.toLocaleString()}\n*50% Advance:* Rs.${advance.toLocaleString()}`;
     window.open(`https://wa.me/${PHONE}?text=${encodeURIComponent(msg)}`, '_blank');
   };
 
   const handleAddToCart = () => {
-    // Read latest cart from localStorage
     const cart = readCart();
     const cartId = `${product.id}-${selectedSize}`;
     const existing = cart.find(item => item.cartId === cartId);
-
     let updated: CartItem[];
     if (existing) {
-      // Already in cart — just bump quantity
       updated = cart.map(item =>
-        item.cartId === cartId
-          ? { ...item, quantity: item.quantity + quantity }
-          : item
+        item.cartId === cartId ? { ...item, quantity: item.quantity + quantity } : item
       );
     } else {
-      // New item — push to list
       updated = [
         ...cart,
         {
@@ -505,15 +500,14 @@ function QuickViewModal({ product, onClose }: { product: Product; onClose: () =>
           productId: product.id,
           title: product.title,
           sku: product.sku || '',
-          price: product.price,
+          price: currentPrice,
           image,
           size: selectedSize,
           quantity,
         },
       ];
     }
-
-    writeCart(updated);   // saves + fires event → CartBar re-renders
+    writeCart(updated);
     setAdded(true);
     setTimeout(() => setAdded(false), 1800);
   };
@@ -521,12 +515,8 @@ function QuickViewModal({ product, onClose }: { product: Product; onClose: () =>
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
       <div className="absolute inset-0" onClick={onClose} />
-
       <div className="bg-white rounded-xs overflow-hidden max-w-[760px] w-full relative shadow-2xl flex flex-col md:flex-row animate-in fade-in zoom-in-95 duration-200 z-10">
-        <button
-          onClick={onClose}
-          className="absolute top-0 right-0 z-50 bg-black text-white w-10 h-10 flex items-center justify-center hover:bg-neutral-800 cursor-pointer"
-        >
+        <button onClick={onClose} className="absolute top-0 right-0 z-50 bg-black text-white w-10 h-10 flex items-center justify-center hover:bg-neutral-800 cursor-pointer">
           <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/>
           </svg>
@@ -537,17 +527,9 @@ function QuickViewModal({ product, onClose }: { product: Product; onClose: () =>
           onClick={() => { onClose(); router.push(`/products/${product.id}`); }}
         >
           <div className="relative aspect-square w-full rounded-xs overflow-hidden group/img">
-            <Image
-              src={image}
-              alt={product.title}
-              fill
-              className="object-cover transition-transform duration-500 group-hover/img:scale-105"
-              unoptimized
-            />
+            <Image src={image} alt={product.title} fill className="object-cover transition-transform duration-500 group-hover/img:scale-105" unoptimized />
             <div className="absolute inset-0 bg-black/0 group-hover/img:bg-black/10 transition-colors duration-300 flex items-center justify-center">
-              <span className="opacity-0 group-hover/img:opacity-100 bg-white text-gray-900 text-xs font-bold px-3 py-1.5 rounded-full transition-opacity duration-300">
-                View Detail →
-              </span>
+              <span className="opacity-0 group-hover/img:opacity-100 bg-white text-gray-900 text-xs font-bold px-3 py-1.5 rounded-full transition-opacity duration-300">View Detail →</span>
             </div>
           </div>
           <div className="flex gap-2 mt-3">
@@ -558,14 +540,17 @@ function QuickViewModal({ product, onClose }: { product: Product; onClose: () =>
         </div>
 
         <div className="w-full md:w-1/2 p-6 flex flex-col overflow-y-auto max-h-[80vh] md:max-h-none">
-          <button
-            onClick={() => { onClose(); router.push(`/products/${product.id}`); }}
-            className="text-left"
-          >
+          <button onClick={() => { onClose(); router.push(`/products/${product.id}`); }} className="text-left">
             <h2 className="text-xl font-serif font-bold text-gray-900 hover:underline">{product.title}</h2>
           </button>
           <p className="text-[11px] text-gray-400 mt-1 uppercase">SKU: {product.sku}</p>
-          <p className="text-lg font-bold text-gray-900 mt-3">Rs.{product.price.toLocaleString()}</p>
+
+          <div className="mt-3">
+            <p className="text-lg font-bold text-gray-900">Rs.{currentPrice.toLocaleString()}</p>
+            {hasTiers && (
+              <p className="text-[10px] text-blue-500 font-medium mt-0.5">↕ Size badalne pe price change hogi</p>
+            )}
+          </div>
 
           <div className="mt-2 inline-flex items-center gap-1.5 bg-amber-50 border border-amber-200 text-amber-700 text-[11px] font-semibold px-2.5 py-1 rounded-full w-fit">
             <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
@@ -579,19 +564,25 @@ function QuickViewModal({ product, onClose }: { product: Product; onClose: () =>
             <span className="text-xs font-bold text-gray-900">{selectedSize}</span>
           </div>
           <div className="flex flex-wrap gap-1.5 mt-2 max-w-[340px]">
-            {sizes.map((size) => (
-              <button
-                key={size}
-                onClick={() => setSelectedSize(size)}
-                className={`px-2.5 py-1.5 text-[11px] font-medium rounded-full border transition-all min-w-[52px] text-center
-                  ${selectedSize === size
-                    ? 'border-black bg-white text-gray-900 font-bold ring-1 ring-black'
-                    : 'border-gray-300 text-gray-700 hover:border-gray-900 bg-white'
-                  }`}
-              >
-                {size}
-              </button>
-            ))}
+            {sizes.map((size) => {
+              const sizePrice = hasTiers ? getPriceForSize(size, product.price_tiers, product.price) : null;
+              return (
+                <button
+                  key={size}
+                  onClick={() => setSelectedSize(size)}
+                  className={`px-2.5 py-1.5 text-[11px] font-medium rounded-full border transition-all min-w-[52px] text-center
+                    ${selectedSize === size
+                      ? 'border-black bg-white text-gray-900 font-bold ring-1 ring-black'
+                      : 'border-gray-300 text-gray-700 hover:border-gray-900 bg-white'
+                    }`}
+                >
+                  {size}
+                  {hasTiers && sizePrice && sizePrice !== product.price && (
+                    <span className="block text-[9px] text-gray-400 leading-tight">{sizePrice.toLocaleString()}</span>
+                  )}
+                </button>
+              );
+            })}
           </div>
 
           <div className="mt-4">
@@ -605,9 +596,7 @@ function QuickViewModal({ product, onClose }: { product: Product; onClose: () =>
 
           <div className="mt-4 border-t border-gray-100 pt-3 text-xs text-gray-700 flex gap-1">
             <span>Subtotal:</span>
-            <span className="font-bold text-gray-900">
-              Rs.{total.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-            </span>
+            <span className="font-bold text-gray-900">Rs.{total.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
           </div>
 
           <div className="mt-5 space-y-2.5">
@@ -641,7 +630,7 @@ function QuickViewModal({ product, onClose }: { product: Product; onClose: () =>
 }
 
 /* ============================================================
-   6. FESTIVAL PICKS SECTION — Supabase dynamic (section='festival')
+   6. FESTIVAL PICKS SECTION
    ============================================================ */
 function FestivalSection() {
   const router = useRouter();
@@ -652,7 +641,7 @@ function FestivalSection() {
   useEffect(() => {
     supabase
       .from('products')
-      .select('*')
+      .select('id,title,price,sku,images,sizes,category,in_stock,section,price_tiers')
       .eq('in_stock', true)
       .eq('section', 'festival')
       .order('created_at', { ascending: false })
@@ -663,19 +652,14 @@ function FestivalSection() {
       });
   }, []);
 
-  if (loading) return null; // silently wait
-  if (products.length === 0) return null; // hide section if no festival products
+  if (loading) return null;
+  if (products.length === 0) return null;
 
   return (
     <section className="w-full select-none relative max-w-[1400px] mx-auto px-4 md:px-8 py-14 md:py-20">
-      {/* Decorative heading with festive feel */}
       <div className="text-center mb-10 relative">
-        <p className="text-[11px] uppercase tracking-[0.25em] text-amber-600 font-semibold mb-2">
-          🎉 Special Collection
-        </p>
-        <h2 className="text-3xl md:text-4xl font-bold font-serif text-gray-900 tracking-wide">
-          Festival Picks
-        </h2>
+        <p className="text-[11px] uppercase tracking-[0.25em] text-amber-600 font-semibold mb-2">🎉 Special Collection</p>
+        <h2 className="text-3xl md:text-4xl font-bold font-serif text-gray-900 tracking-wide">Festival Picks</h2>
         <div className="mt-3 mx-auto w-16 h-[2px] bg-amber-400 rounded-full" />
       </div>
 
@@ -710,7 +694,6 @@ function FestivalSection() {
                       className="object-cover object-center transition-transform duration-700 group-hover/card:scale-102"
                       unoptimized
                     />
-                    {/* Festival badge */}
                     <div className="absolute top-3 left-3 z-10 bg-amber-400 text-white text-[9px] font-bold uppercase tracking-wider px-2 py-1 rounded-full">
                       Festival
                     </div>
@@ -731,12 +714,15 @@ function FestivalSection() {
                     className="mt-4 space-y-1 px-1 cursor-pointer"
                     onClick={() => router.push(`/products/${product.id}`)}
                   >
-                    <h3 className="text-[15px] md:text-[16px] font-bold text-gray-900 tracking-tight hover:underline">
-                      {product.title}
-                    </h3>
+                    <h3 className="text-[15px] md:text-[16px] font-bold text-gray-900 tracking-tight hover:underline">{product.title}</h3>
                     <div className="text-[14px] md:text-[15px] flex items-center gap-1.5">
                       <span className="text-gray-400 font-normal">from</span>
-                      <span className="text-gray-900 font-bold">Rs.{product.price.toLocaleString()}</span>
+                      <span className="text-gray-900 font-bold">
+                        Rs.{(product.price_tiers?.length
+                          ? Math.min(...product.price_tiers.filter(t => t.price).map(t => parseFloat(t.price)))
+                          : product.price
+                        ).toLocaleString()}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -746,14 +732,10 @@ function FestivalSection() {
         </div>
 
         <button className="festival-prev-btn absolute -left-4 md:-left-8 top-[40%] -translate-y-1/2 z-30 bg-amber-400 text-white w-16 h-10 md:w-20 md:h-12 rounded-xl flex items-center justify-center cursor-pointer hover:bg-amber-500 shadow-lg">
-          <svg className="w-9 h-9 md:w-12 md:h-12" fill="none" stroke="currentColor" strokeWidth="1.3" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M22 12H2M2 12L8 6M2 12L8 18"/>
-          </svg>
+          <svg className="w-9 h-9 md:w-12 md:h-12" fill="none" stroke="currentColor" strokeWidth="1.3" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M22 12H2M2 12L8 6M2 12L8 18"/></svg>
         </button>
         <button className="festival-next-btn absolute -right-4 md:-right-8 top-[40%] -translate-y-1/2 z-30 bg-amber-400 text-white w-16 h-10 md:w-20 md:h-12 rounded-xl flex items-center justify-center cursor-pointer hover:bg-amber-500 shadow-lg">
-          <svg className="w-9 h-9 md:w-12 md:h-12" fill="none" stroke="currentColor" strokeWidth="1.3" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M2 12H22M22 12L16 6M22 12L16 18"/>
-          </svg>
+          <svg className="w-9 h-9 md:w-12 md:h-12" fill="none" stroke="currentColor" strokeWidth="1.3" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M2 12H22M22 12L16 6M22 12L16 18"/></svg>
         </button>
       </div>
 
@@ -765,7 +747,7 @@ function FestivalSection() {
 }
 
 /* ============================================================
-   7. TRENDING SECTION — Supabase dynamic (section='new-arrivals' or no section)
+   7. TRENDING SECTION
    ============================================================ */
 function TrendingSection() {
   const router = useRouter();
@@ -776,9 +758,9 @@ function TrendingSection() {
   useEffect(() => {
     supabase
       .from('products')
-      .select('*')
+      .select('id,title,price,sku,images,sizes,category,in_stock,section,price_tiers')
       .eq('in_stock', true)
-      .neq('section', 'festival')   // exclude festival-only items
+      .neq('section', 'festival')
       .order('created_at', { ascending: false })
       .limit(8)
       .then(({ data }) => {
@@ -860,12 +842,15 @@ function TrendingSection() {
                     className="mt-4 space-y-1 px-1 cursor-pointer"
                     onClick={() => router.push(`/products/${product.id}`)}
                   >
-                    <h3 className="text-[15px] md:text-[16px] font-bold text-gray-900 tracking-tight hover:underline">
-                      {product.title}
-                    </h3>
+                    <h3 className="text-[15px] md:text-[16px] font-bold text-gray-900 tracking-tight hover:underline">{product.title}</h3>
                     <div className="text-[14px] md:text-[15px] flex items-center gap-1.5">
                       <span className="text-gray-400 font-normal">from</span>
-                      <span className="text-gray-900 font-bold">Rs.{product.price.toLocaleString()}</span>
+                      <span className="text-gray-900 font-bold">
+                        Rs.{(product.price_tiers?.length
+                          ? Math.min(...product.price_tiers.filter(t => t.price).map(t => parseFloat(t.price)))
+                          : product.price
+                        ).toLocaleString()}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -875,14 +860,10 @@ function TrendingSection() {
         </div>
 
         <button className="trending-prev-btn absolute -left-4 md:-left-8 top-[40%] -translate-y-1/2 z-30 bg-black text-white w-16 h-10 md:w-20 md:h-12 rounded-xl flex items-center justify-center cursor-pointer hover:bg-neutral-900 shadow-lg">
-          <svg className="w-9 h-9 md:w-12 md:h-12" fill="none" stroke="currentColor" strokeWidth="1.3" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M22 12H2M2 12L8 6M2 12L8 18"/>
-          </svg>
+          <svg className="w-9 h-9 md:w-12 md:h-12" fill="none" stroke="currentColor" strokeWidth="1.3" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M22 12H2M2 12L8 6M2 12L8 18"/></svg>
         </button>
         <button className="trending-next-btn absolute -right-4 md:-right-8 top-[40%] -translate-y-1/2 z-30 bg-black text-white w-16 h-10 md:w-20 md:h-12 rounded-xl flex items-center justify-center cursor-pointer hover:bg-neutral-900 shadow-lg">
-          <svg className="w-9 h-9 md:w-12 md:h-12" fill="none" stroke="currentColor" strokeWidth="1.3" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M2 12H22M22 12L16 6M22 12L16 18"/>
-          </svg>
+          <svg className="w-9 h-9 md:w-12 md:h-12" fill="none" stroke="currentColor" strokeWidth="1.3" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M2 12H22M22 12L16 6M22 12L16 18"/></svg>
         </button>
       </div>
 

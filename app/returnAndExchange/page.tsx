@@ -145,7 +145,7 @@ export default function ReturnAndExchangePage() {
             WhatsApp Support: <span className="text-black">+92 315-1640537</span>
           </p>
           <p className="font-semibold text-gray-900">
-            Email: <a href="mailto:cuteminimos@gmail.com" className="text-blue-600 hover:underline font-normal">customercare@Cuteminimos.com</a>
+            Email: <a href="mailto:cuteminimos@gmail.com" className="text-blue-600 hover:underline font-normal">cuteminimos@gmail.com</a>
           </p>
         </div>
       ),

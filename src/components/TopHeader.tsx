@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState, Suspense } from 'react';
+import { CATEGORIES } from '@/lib/categories'; // ✅ shared categories — same list used on home page
 
 const TopHeaderContent = () => {
     const router = useRouter();
@@ -10,6 +11,7 @@ const TopHeaderContent = () => {
 
     const initialQuery = searchParams.get('query') || '';
     const [searchQuery, setSearchQuery] = useState(initialQuery);
+    const [categoryMenuOpen, setCategoryMenuOpen] = useState(false);
 
     useEffect(() => {
         setSearchQuery(searchParams.get('query') || '');
@@ -42,6 +44,9 @@ const TopHeaderContent = () => {
                             className="object-contain"
                         />
                     </Link>
+                    <span className="hidden md:block font-serif font-bold text-lg text-gray-900 tracking-wide">
+                        Cute <span className="text-gray-400 font-normal">minimos</span>
+                    </span>
                 </div>
 
                 <div className="flex flex-col gap-2 items-end">
@@ -92,6 +97,56 @@ const TopHeaderContent = () => {
                     </div>
                 </div>
 
+            </div>
+
+            {/* ── CATEGORY NAVIGATION ──────────────────────────────────
+                Same CATEGORIES list jo home page (Shop By Category) aur
+                admin panel mein use hoti hai — isliye yahan se click karne
+                par kabhi 404 nahi aayega.
+            ──────────────────────────────────────────────────────────── */}
+            <div className="max-w-6xl mx-auto border-t border-gray-100 mt-1">
+                {/* Desktop: full row of category links */}
+                <nav className="hidden md:flex items-center gap-5 py-2.5 overflow-x-auto">
+                    {CATEGORIES.map((cat) => (
+                        <Link
+                            key={cat.value}
+                            href={`/category/${cat.value}`}
+                            className="text-xs font-semibold text-gray-600 hover:text-black whitespace-nowrap transition-colors"
+                        >
+                            {cat.label}
+                        </Link>
+                    ))}
+                </nav>
+
+                {/* Mobile: dropdown menu to save space */}
+                <div className="md:hidden py-2">
+                    <button
+                        onClick={() => setCategoryMenuOpen((prev) => !prev)}
+                        className="flex items-center gap-1.5 text-xs font-semibold text-gray-700"
+                    >
+                        Categories
+                        <svg
+                            className={`w-3.5 h-3.5 transition-transform duration-200 ${categoryMenuOpen ? 'rotate-180' : ''}`}
+                            fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"
+                        >
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </button>
+                    {categoryMenuOpen && (
+                        <div className="grid grid-cols-2 gap-2 mt-2 pb-2">
+                            {CATEGORIES.map((cat) => (
+                                <Link
+                                    key={cat.value}
+                                    href={`/category/${cat.value}`}
+                                    onClick={() => setCategoryMenuOpen(false)}
+                                    className="text-xs font-medium text-gray-600 hover:text-black bg-gray-50 rounded-lg px-3 py-2 transition-colors"
+                                >
+                                    {cat.label}
+                                </Link>
+                            ))}
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     );

@@ -5,7 +5,6 @@ import Link from 'next/link';
 
 const Footer = () => {
     return (
-        // Naye layout ke mutabiq w-screen aur negative margins hata kar w-full kar diya hai
         <div className="bg-[#1c1c1c] text-[#a3a3a3] text-sm font-light pt-8 pb-8 px-4 md:px-12 w-full">
             <div className="max-w-[1400px] mx-auto">
 
@@ -27,8 +26,8 @@ const Footer = () => {
                             <span>Chichawatni, 57200</span>
                         </a>
 
-                        <a href="mailto:Customercare@Swocclothing.Com" className="hover:text-white hover:underline underline-offset-4 transition-all duration-200 mt-2 w-fit">
-                            Customercare@Swocclothing.Com
+                        <a href="mailto:cuteminimos@gmail.com" className="hover:text-white hover:underline underline-offset-4 transition-all duration-200 mt-2 w-fit">
+                            cuteminimos@gmail.com
                         </a>
 
                         <a
@@ -45,17 +44,13 @@ const Footer = () => {
                     <div className="flex text-white/70 flex-col gap-1.5 lg:col-span-1">
                         <h3 className="text-white font-bold text-base tracking-wider uppercase mb-2">Customer Care</h3>
                         <Link href="/returnAndExchange" className="hover:text-white hover:underline underline-offset-4 transition-all duration-200 w-fit">Return And Exchange</Link>
-                        <Link href="/faqs" className="hover:text-white hover:underline underline-offset-4 transition-all duration-200 w-fit">FAQs</Link>
                         <Link href="/contactUs" className="hover:text-white hover:underline underline-offset-4 transition-all duration-200 w-fit">Contact Us</Link>
                     </div>
 
-                    {/* Column 3: Information (Separate Pages Link) */}
+                    {/* Column 3: Information */}
                     <div className="flex text-white/70 flex-col gap-1.5 lg:col-span-1">
                         <h3 className="text-white font-bold text-base tracking-wider uppercase mb-2">Information</h3>
                         <Link href="/aboutUs" className="hover:text-white hover:underline underline-offset-4 transition-all duration-200 w-fit">About Us</Link>
-                        <Link href="/privacy-policy" className="hover:text-white hover:underline underline-offset-4 transition-all duration-200 w-fit">Privacy Policy</Link>
-                        <Link href="/terms-of-service" className="hover:text-white hover:underline underline-offset-4 transition-all duration-200 w-fit">Terms Of Service</Link>
-                        <Link href="/resolution-policy" className="hover:text-white hover:underline underline-offset-4 transition-all duration-200 w-fit">Resolution Policy</Link>
                         <Link href="/payments" className="hover:text-white hover:underline underline-offset-4 transition-all duration-200 w-fit">Payments</Link>
                     </div>
 
@@ -63,7 +58,7 @@ const Footer = () => {
                     <div className="flex flex-col gap-1.5 items-start lg:col-span-2">
                         <h3 className="text-white font-bold text-base tracking-wider uppercase mb-2">Newsletter Sign Up</h3>
                         <p className="text-xs text-white/70 whitespace-nowrap">
-                            Sign up for exclusive updates, new arrivals & insider only discounts
+                            
                         </p>
 
                         <div className="flex w-full max-w-xl mt-2 gap-2">
@@ -77,7 +72,7 @@ const Footer = () => {
                             </button>
                         </div>
 
-                        {/* Social Icons with Double Ring Hover Effect */}
+                        {/* Social Icons */}
                         <div className="flex items-center gap-3 mt-4">
                             <a
                                 href="https://www.facebook.com/share/197ddcU2tE/"
@@ -119,19 +114,10 @@ const Footer = () => {
                 </div>
 
                 {/* Bottom Section */}
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-6">
+                <div className="flex items-center justify-center pt-6 border-t border-white/10">
                     <p className="text-xs text-white">
-                        Copyright © Swocclothing <span className="text-gray-600 mx-1">|</span> All rights reserved.
+                        Copyright © Cute Minimo'S <span className="text-gray-600 mx-1">|</span> All rights reserved.
                     </p>
-
-                    <div className="flex items-center gap-2">
-                        <div className="bg-white px-2 py-1 rounded shadow-sm flex items-center justify-center h-7 w-11">
-                            <img src="https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg" alt="Visa" className="h-3 object-contain" />
-                        </div>
-                        <div className="bg-white px-2 py-1 rounded shadow-sm flex items-center justify-center h-7 w-11">
-                            <img src="https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg" alt="Mastercard" className="h-5 object-contain" />
-                        </div>
-                    </div>
                 </div>
 
             </div>
