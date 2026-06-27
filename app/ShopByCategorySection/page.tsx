@@ -24,7 +24,7 @@ const CATEGORY_IMAGES: Record<string, string> = {
 
 export default function ShopByCategorySection() {
   return (
-    <section className="w-full max-w-6xl mx-auto px-4 -mt-10 md:-mt-20 pt-4 md:pt-6 pb-16 md:pb-24 select-none">
+    <section className="w-full max-w-6xl mx-auto px-4 mt-4 md:-mt-20 pt-4 md:pt-6 pb-16 md:pb-24 select-none">
 
       {/* Title */}
       <div className="mb-10 text-center">

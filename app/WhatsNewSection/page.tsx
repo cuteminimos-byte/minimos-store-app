@@ -50,7 +50,7 @@ function WhatsNewSectionContent() {
     }
 
     return (
-        <section className="w-full bg-transparent -mt-6 md:-mt-10 md:py-24 select-none relative group/section">
+        <section className="w-full bg-transparent mt-4 md:-mt-10 py-10 md:py-24 select-none relative group/section">
             <div className="text-center mb-10">
                 <h2 className="text-xl md:text-4xl font-serif text-gray-900 tracking-wide">
                     What's New

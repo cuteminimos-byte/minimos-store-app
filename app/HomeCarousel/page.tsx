@@ -347,7 +347,7 @@ function WhatsNewSectionInner() {
   );
 
   return (
-    <section className="w-full bg-transparent -mt-6 md:-mt-10 md:py-24 select-none relative">
+    <section className="w-full bg-transparent mt-2 md:-mt-10 py-10 md:py-24 select-none relative">
       <div className="text-center mb-10">
         <h2 className="text-xl md:text-4xl font-serif text-gray-900 tracking-wide">What's New</h2>
       </div>
@@ -428,7 +428,7 @@ function ShopByCategorySection() {
   ];
 
   return (
-    <section className="w-full max-w-6xl mx-auto px-4 -mt-10 md:-mt-20 pt-4 md:pt-6 pb-16 md:pb-24 select-none">
+    <section className="w-full max-w-6xl mx-auto px-4 mt-4 md:-mt-20 pt-4 md:pt-6 pb-16 md:pb-24 select-none">
       <div className="mb-10 text-center">
         <h2 className="text-xl md:text-4xl font-serif text-gray-900 tracking-wide">Shop By Category</h2>
       </div>
