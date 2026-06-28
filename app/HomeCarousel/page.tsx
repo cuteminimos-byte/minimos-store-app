@@ -195,10 +195,20 @@ function CartBar() {
 
   return (
     <>
-      <div className="w-full bg-white border-b border-gray-100 sticky top-0 z-40 px-4 md:px-8 py-3 flex items-center justify-between shadow-sm">
-        <Link href="/" className="font-serif font-bold text-lg text-gray-900 tracking-wide">
-          Cute <span className="text-gray-400 font-normal">minimos</span>
+      {/* ── TOP NAV BAR ─────────────────────────────────────────── */}
+      <div className="w-full bg-white border-b border-gray-100 sticky top-0 z-40 px-4 md:px-8 py-2 flex items-center justify-between shadow-sm">
+        <Link href="/" className="flex items-center gap-3">
+          {/* Logo — correct path: /images/Logo1.jpg (capital L, no s) */}
+          <img
+            src="/images/Logo1.jpg"
+            alt="Cute Minimos"
+            style={{ width: '48px', height: '48px', objectFit: 'contain', borderRadius: '50%' }}
+          />
+          <span className="font-serif font-bold text-base text-gray-900 tracking-wide hidden sm:block">
+            Cute <span className="text-gray-400 font-normal">minimos</span>
+          </span>
         </Link>
+
         <button
           onClick={() => setDrawerOpen(true)}
           className="relative flex items-center gap-2 bg-black text-white px-4 py-2 rounded-full text-sm font-semibold hover:bg-gray-800 transition-colors"
@@ -215,6 +225,7 @@ function CartBar() {
         </button>
       </div>
 
+      {/* ── FLOATING CART BUTTON ─────────────────────────────────── */}
       {totalItems > 0 && (
         <button
           onClick={() => setDrawerOpen(true)}
@@ -229,6 +240,7 @@ function CartBar() {
         </button>
       )}
 
+      {/* ── CART DRAWER ──────────────────────────────────────────── */}
       {drawerOpen && (
         <div className="fixed inset-0 z-50 flex justify-end">
           <div className="absolute inset-0 bg-black/50" onClick={() => setDrawerOpen(false)} />
@@ -307,11 +319,7 @@ function CartBar() {
 
 /* ============================================================
    3. WHAT'S NEW SECTION
-   — Fixed: all items now have unique IDs (no more duplicate key=6)
-   — Images mapped per category value
    ============================================================ */
-
-// Image map — category value → image path
 const WHATS_NEW_IMAGES: Record<string, string> = {
   'summer-basics':    '/images/image1.jpeg',
   'hand-embroidered': '/images/image2.jpeg',
@@ -319,18 +327,17 @@ const WHATS_NEW_IMAGES: Record<string, string> = {
   'shadi-season':     '/images/image7.jpeg',
   'mommy-and-me':     '/images/image8.jpeg',
   'siblings-duo':     '/images/image7 (3).jpeg',
-  'b-boys':           '/images/image17.png', // replace when you have a dedicated image
-  'women-classic':    '/images/image9.jpeg', // replace when you have a dedicated image
-  'accessories':      '/images/image1z.jpeg', // replace when you have a dedicated image
+  'b-boys':           '/images/image17.png',
+  'women-classic':    '/images/image9.jpeg',
+  'accessories':      '/images/image1z.jpeg',
 };
 
 function WhatsNewSectionInner() {
   const searchParams = useSearchParams();
   const searchQuery = searchParams.get('query')?.toLowerCase() || '';
 
-  // Build products from shared CATEGORIES — always in sync, no duplicate IDs
   const products = CATEGORIES.map((cat) => ({
-    id: cat.value,           // unique slug — no more id:6 collision
+    id: cat.value,
     title: cat.label,
     src: WHATS_NEW_IMAGES[cat.value] || '/images/image1.jpeg',
     link: `/category/${cat.value}`,
@@ -342,7 +349,8 @@ function WhatsNewSectionInner() {
 
   if (filtered.length === 0) return (
     <section className="w-full text-center py-12 text-gray-500">
-      <p>No products found matching your search.</p>
+      <p>No categories found matching &quot;{searchQuery}&quot;.</p>
+      <Link href="/" className="mt-3 inline-block text-sm text-black underline">Clear search</Link>
     </section>
   );
 
@@ -416,9 +424,6 @@ function WhatsNewSection() {
 
 /* ============================================================
    4. SHOP BY CATEGORY SECTION
-   — Swiper replaced with a clean 3-card grid
-   — Uses real images: image7, image8, image3
-   — Only 3 highlighted categories shown
    ============================================================ */
 function ShopByCategorySection() {
   const featured = [
@@ -543,7 +548,7 @@ function QuickViewModal({ product, onClose }: { product: Product; onClose: () =>
           <div className="mt-3">
             <p className="text-lg font-bold text-gray-900">Rs.{currentPrice.toLocaleString()}</p>
             {hasTiers && (
-              <p className="text-[10px] text-blue-500 font-medium mt-0.5">↕ Size badalne pe price change hogi</p>
+              <p className="text-[10px] text-blue-500 font-medium mt-0.5">↕ Prices vary according to size</p>
             )}
           </div>
 

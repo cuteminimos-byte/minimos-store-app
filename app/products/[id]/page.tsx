@@ -227,7 +227,7 @@ export default function ProductDetailPage() {
             </span>
             {hasTiers && (
               <p className="text-[11px] text-blue-500 font-medium mt-1">
-                ↕ Size badalne pe price change hogi
+                ↕ Prices vary according to size
               </p>
             )}
           </div>
